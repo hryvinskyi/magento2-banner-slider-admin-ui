@@ -13,6 +13,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Real-time synchronization between slider and input
 - `generatePreviewImages()` function for browser-only preview generation
 - `syncQualityInputs()` helper for slider/input synchronization
+- Image settings change tracking for smart regeneration
+  - `getChangedBreakpointIds()` - returns list of breakpoints with changed settings
+  - `generateBreakpointImagesByIds()` - regenerates only specified breakpoints
+  - `storeSavedCropsState()` - stores state for comparison
 
 ### Changed
 - "Generate Images" button renamed to "Generate Preview"
@@ -20,6 +24,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Generates preview images in browser only (no server upload)
   - Uses blob URLs for temporary preview display
 - Quality slider updates no longer trigger cropper reinitialization
+- Form save now only regenerates images for breakpoints with changed settings
+  - Tracks changes per breakpoint: crop position, quality, source image
+  - Only regenerates affected breakpoints, not all
+  - Skips regeneration entirely when only non-image fields change (dates, status, etc.)
 
 ### Fixed
 - "Use Desktop Image" button now correctly loads desktop image
@@ -28,6 +36,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Moving `destroyCropper()` call before observable updates
   - Using `silent: true` in save callbacks to prevent unnecessary re-renders
   - Quality changes no longer cause cropper to reinitialize
+  - Toggling "Show Quality Comparison" no longer causes cropper blink
+  - Added cropper state tracking to skip redundant reinitialization
 
 ### Removed
 - "Save & Generate All Images" button from responsive cropper UI

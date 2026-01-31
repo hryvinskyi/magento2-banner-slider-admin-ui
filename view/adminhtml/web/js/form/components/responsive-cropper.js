@@ -107,6 +107,8 @@ define([
             this.isCompressing = ko.observable(false);
             this.wasmNotSupported = ko.observable(false);
             this.previewUrls = ko.observable({});
+            this.savedCropsState = {};
+            this.autoSaveHint = $t('Saves crop position and quality settings only. Images are generated when you save the banner.');
 
             this.subscribeToComparisonToggle();
 
@@ -114,6 +116,69 @@ define([
         },
 
         // ==================== HELPER METHODS ====================
+
+        /**
+         * Fields that trigger image regeneration when changed
+         */
+        imageRelatedFields: [
+            'crop_x', 'crop_y', 'crop_width', 'crop_height',
+            'webp_quality', 'avif_quality',
+            'generate_webp', 'generate_avif',
+            'source_image', 'custom_source_image'
+        ],
+
+        /**
+         * Store current crops state as saved state
+         */
+        storeSavedCropsState: function () {
+            var crops = this.crops();
+            this.savedCropsState = JSON.parse(JSON.stringify(crops));
+        },
+
+        /**
+         * Get list of breakpoint IDs that have changed image settings
+         *
+         * @returns {Array}
+         */
+        getChangedBreakpointIds: function () {
+            var self = this;
+            var currentCrops = this.crops();
+            var savedCrops = this.savedCropsState;
+            var changedIds = [];
+
+            Object.keys(currentCrops).forEach(function (breakpointId) {
+                var current = currentCrops[breakpointId] || {};
+                var saved = savedCrops[breakpointId] || {};
+                var hasChanges = false;
+
+                self.imageRelatedFields.forEach(function (field) {
+                    if (hasChanges) {
+                        return;
+                    }
+
+                    var currentValue = current[field];
+                    var savedValue = saved[field];
+
+                    // Normalize undefined/null to compare properly
+                    if (currentValue === undefined || currentValue === null) {
+                        currentValue = '';
+                    }
+                    if (savedValue === undefined || savedValue === null) {
+                        savedValue = '';
+                    }
+
+                    if (String(currentValue) !== String(savedValue)) {
+                        hasChanges = true;
+                    }
+                });
+
+                if (hasChanges) {
+                    changedIds.push(breakpointId);
+                }
+            });
+
+            return changedIds;
+        },
 
         /**
          * Check if WebP generation is enabled
@@ -231,11 +296,12 @@ define([
         // ==================== FORM SAVE METHODS ====================
 
         /**
-         * Generate and save with callback
+         * Save crop data and then execute callback
+         * Only regenerates images if image-related settings changed
          *
          * @param {Function} saveCallback
          */
-        generateAndSaveWithCallback: function (saveCallback) {
+        saveCropDataWithCallback: function (saveCallback) {
             var self = this;
 
             if (!this.bannerId() || this.breakpoints().length === 0) {
@@ -243,13 +309,20 @@ define([
                 return;
             }
 
+            var changedBreakpointIds = this.getChangedBreakpointIds();
+
             self.isLoading(true);
 
             this.saveAllBreakpoints()
                 .then(function () {
-                    return self.generateAllBreakpointImages();
+                    if (changedBreakpointIds.length > 0) {
+                        return self.generateBreakpointImagesByIds(changedBreakpointIds);
+                    }
+
+                    return Promise.resolve();
                 })
                 .then(function () {
+                    self.storeSavedCropsState();
                     self.isLoading(false);
                     saveCallback();
                 })
@@ -260,17 +333,17 @@ define([
         },
 
         /**
-         * Generate images and save form
+         * Save crop data and save form
          */
         generateAndSave: function () {
-            this.generateAndSaveWithCallback(this.saveForm.bind(this));
+            this.saveCropDataWithCallback(this.saveForm.bind(this));
         },
 
         /**
-         * Generate images and save form with continue edit
+         * Save crop data and save form with continue edit
          */
         generateAndSaveAndContinue: function () {
-            this.generateAndSaveWithCallback(this.saveFormAndContinue.bind(this));
+            this.saveCropDataWithCallback(this.saveFormAndContinue.bind(this));
         },
 
         /**
@@ -536,8 +609,6 @@ define([
 
                     self.setCropData(breakpoint.breakpoint_id, updated);
                     self.showComparison(true);
-
-                    ajaxService.showSuccess($t('Preview generated.'));
                 })
                 .catch(function (error) {
                     self.isCompressing(false);
@@ -648,6 +719,39 @@ define([
             var toProcess = [];
 
             this.breakpoints().forEach(function (breakpoint) {
+                var cropData = self.getCropData(breakpoint.breakpoint_id);
+                if (cropData && cropData.crop_id) {
+                    toProcess.push({breakpoint: breakpoint, cropData: cropData});
+                }
+            });
+
+            if (toProcess.length === 0) {
+                return Promise.resolve();
+            }
+
+            return toProcess.reduce(function (chain, item) {
+                return chain.then(function () {
+                    return self.generateBreakpointImageInBrowser(item.breakpoint, item.cropData);
+                });
+            }, Promise.resolve());
+        },
+
+        /**
+         * Generate images only for specified breakpoint IDs
+         *
+         * @param {Array} breakpointIds
+         * @return {Promise}
+         */
+        generateBreakpointImagesByIds: function (breakpointIds) {
+            var self = this;
+            var toProcess = [];
+
+            this.breakpoints().forEach(function (breakpoint) {
+                var id = String(breakpoint.breakpoint_id);
+                if (breakpointIds.indexOf(id) === -1) {
+                    return;
+                }
+
                 var cropData = self.getCropData(breakpoint.breakpoint_id);
                 if (cropData && cropData.crop_id) {
                     toProcess.push({breakpoint: breakpoint, cropData: cropData});
@@ -946,6 +1050,16 @@ define([
          * @param {Object} breakpoint
          */
         initCropper: function (imageElement, breakpoint) {
+            // Skip if cropper is already initialized for the same image and breakpoint
+            if (this.cropperManager.isInitialized() &&
+                this.currentCropperImage === imageElement.src &&
+                this.currentCropperBreakpointId === breakpoint.breakpoint_id) {
+                return;
+            }
+
+            this.currentCropperImage = imageElement.src;
+            this.currentCropperBreakpointId = breakpoint.breakpoint_id;
+
             var savedCropData = this.getCropData(breakpoint.breakpoint_id);
             this.cropperManager.init(imageElement, breakpoint, savedCropData);
         },
@@ -957,6 +1071,8 @@ define([
             if (this.cropperManager) {
                 this.cropperManager.destroy();
                 this.cropperInitialized(false);
+                this.currentCropperImage = null;
+                this.currentCropperBreakpointId = null;
             }
         },
 
@@ -1029,6 +1145,7 @@ define([
             if (data.crops) {
                 this.crops(data.crops);
                 this.loadBreakpointImagesFromCrops(data.crops);
+                this.storeSavedCropsState();
             }
 
             if (data.banner_id) {

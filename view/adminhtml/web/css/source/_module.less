@@ -822,6 +822,96 @@
                 content: '\e62d'; // checkmark icon
                 font-size: 12px;
             }
+
+            .autosave-tooltip {
+                position: relative;
+                display: inline-flex;
+                align-items: center;
+                width: 16px;
+                margin: 0;
+
+                .admin__field-tooltip-action {
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    width: 16px;
+                    height: 16px;
+                    min-width: 16px;
+                    min-height: 16px;
+                    border: 1px solid @color-green;
+                    border-radius: 50%;
+                    background: transparent;
+                    cursor: pointer;
+                    text-decoration: none;
+                    box-sizing: border-box;
+                    padding: 0;
+                    margin: 0;
+
+                    &::before,
+                    &::after {
+                        all: unset;
+                    }
+
+                    &::before {
+                        content: '?';
+                        font-family: Arial, sans-serif;
+                        font-size: 10px;
+                        font-weight: 700;
+                        color: @color-green;
+                        line-height: 1;
+                    }
+
+                    &:hover,
+                    &:focus {
+                        background: @color-green;
+                        outline: none;
+
+                        &::before {
+                            color: #fff;
+                        }
+                    }
+                }
+
+                .admin__field-tooltip-content {
+                    display: none;
+                    position: absolute;
+                    bottom: calc(100% + 8px);
+                    left: 50%;
+                    transform: translateX(-50%);
+                    padding: 10px 12px;
+                    width: 260px;
+                    background: #333;
+                    border-radius: 4px;
+                    color: #fff;
+                    font-size: 12px;
+                    font-weight: 400;
+                    line-height: 1.4;
+                    text-align: center;
+                    white-space: normal;
+                    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.25);
+                    z-index: 1000;
+
+                    &::before,
+                    &::after {
+                        all: unset;
+                    }
+
+                    &::after {
+                        content: '';
+                        position: absolute;
+                        top: 100%;
+                        left: 50%;
+                        transform: translateX(-50%);
+                        border: 6px solid transparent;
+                        border-top-color: #333;
+                    }
+                }
+
+                &:hover .admin__field-tooltip-content,
+                .admin__field-tooltip-action:focus + .admin__field-tooltip-content {
+                    display: block;
+                }
+            }
         }
 
         @keyframes fadeInScale {

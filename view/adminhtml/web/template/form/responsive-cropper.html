@@ -253,6 +253,10 @@
             </span>
             <span class="saved-indicator" data-bind="visible: !$parent.isSaving() && $parent.getCropData(breakpoint_id).crop_id">
                 <span data-bind="i18n: 'Auto-saved'"></span>
+                <span class="admin__field-tooltip autosave-tooltip">
+                    <span class="admin__field-tooltip-action action-help" tabindex="0"></span>
+                    <span class="admin__field-tooltip-content" data-bind="text: $parent.autoSaveHint"></span>
+                </span>
             </span>
             <button type="button" class="action-primary"
                     data-bind="click: function() { $parent.generatePreviewImages($data); },
