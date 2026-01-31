@@ -1,0 +1,190 @@
+<?xml version="1.0"?>
+<!--
+  ~ Copyright (c) 2025. Volodymyr Hryvinskyi. All rights reserved.
+  ~ @author: <mailto:volodymyr@hryvinskyi.com>
+  -->
+<config xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:noNamespaceSchemaLocation="urn:magento:framework:ObjectManager/etc/config.xsd">
+
+    <!-- MoveFileFromTmp Command using configured FileUploader from etc/di.xml -->
+    <virtualType name="Hryvinskyi\BannerSliderAdminUi\Model\BannerImageMoveFileFromTmp"
+                 type="Hryvinskyi\MediaUploader\Model\Command\MoveFileFromTmp">
+        <arguments>
+            <argument name="fileUploader" xsi:type="object">Hryvinskyi\BannerSliderAdminUi\Model\MainImageFileUploader</argument>
+        </arguments>
+    </virtualType>
+
+    <!-- MediaUploader Image Preparer Virtual Types -->
+    <virtualType name="Hryvinskyi\BannerSliderAdminUi\Model\DataProvider\Banner\ImagePreparerToString"
+                 type="Hryvinskyi\MediaUploader\Model\DataProvider\PrepareImageToString">
+        <arguments>
+            <argument name="moveFileFromTmp" xsi:type="object">Hryvinskyi\BannerSliderAdminUi\Model\BannerImageMoveFileFromTmp</argument>
+            <argument name="imageKey" xsi:type="string">image</argument>
+        </arguments>
+    </virtualType>
+
+    <virtualType name="Hryvinskyi\BannerSliderAdminUi\Model\DataProvider\Banner\ImagePreparerToArray"
+                 type="Hryvinskyi\MediaUploader\Model\DataProvider\PrepareImageToArray">
+        <arguments>
+            <argument name="imageKey" xsi:type="string">image</argument>
+        </arguments>
+    </virtualType>
+
+    <!-- Banner Adapter Types Configuration -->
+    <type name="Hryvinskyi\BannerSliderAdminUi\Model\DataProvider\Banner\PrepareImageToString">
+        <arguments>
+            <argument name="imagePreparer" xsi:type="object">Hryvinskyi\BannerSliderAdminUi\Model\DataProvider\Banner\ImagePreparerToString</argument>
+        </arguments>
+    </type>
+
+    <type name="Hryvinskyi\BannerSliderAdminUi\Model\DataProvider\Banner\PrepareImageToArray">
+        <arguments>
+            <argument name="imagePreparer" xsi:type="object">Hryvinskyi\BannerSliderAdminUi\Model\DataProvider\Banner\ImagePreparerToArray</argument>
+        </arguments>
+    </type>
+
+    <!-- Banner PrepareDataProcessor Configuration -->
+    <virtualType name="Hryvinskyi\BannerSliderAdminUi\Model\DataProvider\Banner\PrepareDataBeforeSaveProcessor"
+                 type="Hryvinskyi\BannerSliderAdminUi\Model\DataProvider\PrepareDataProcessor">
+        <arguments>
+            <argument name="items" xsi:type="array">
+                <item name="image" xsi:type="array">
+                    <item name="object" xsi:type="object">Hryvinskyi\BannerSliderAdminUi\Model\DataProvider\Banner\PrepareImageToString</item>
+                    <item name="sortOrder" xsi:type="string">20</item>
+                </item>
+                <item name="video_path" xsi:type="array">
+                    <item name="object" xsi:type="object">Hryvinskyi\BannerSliderAdminUi\Model\DataProvider\Banner\PrepareVideoToString</item>
+                    <item name="sortOrder" xsi:type="string">30</item>
+                </item>
+                <item name="from_to_date_filter" xsi:type="array">
+                    <item name="object" xsi:type="object">Hryvinskyi\BannerSliderAdminUi\Model\DataProvider\Banner\FromToDateFilter</item>
+                    <item name="sortOrder" xsi:type="string">40</item>
+                </item>
+                <item name="populate_entity" xsi:type="array">
+                    <item name="object" xsi:type="object">Hryvinskyi\BannerSliderAdminUi\Model\DataProvider\Banner\PopulateEntity</item>
+                    <item name="sortOrder" xsi:type="string">1000</item>
+                </item>
+            </argument>
+        </arguments>
+    </virtualType>
+
+    <type name="Hryvinskyi\BannerSliderAdminUi\Controller\Adminhtml\Banner\Save">
+        <arguments>
+            <argument name="prepareDataProcessor" xsi:type="object">Hryvinskyi\BannerSliderAdminUi\Model\DataProvider\Banner\PrepareDataBeforeSaveProcessor</argument>
+        </arguments>
+    </type>
+
+    <!-- Banner Form Data Provider PrepareDataProcessor Configuration -->
+    <virtualType name="Hryvinskyi\BannerSliderAdminUi\Model\DataProvider\Banner\PrepareDataAfterLoadProcessor"
+                 type="Hryvinskyi\BannerSliderAdminUi\Model\DataProvider\PrepareDataProcessor">
+        <arguments>
+            <argument name="items" xsi:type="array">
+                <item name="image" xsi:type="array">
+                    <item name="object" xsi:type="object">Hryvinskyi\BannerSliderAdminUi\Model\DataProvider\Banner\PrepareImageToArray</item>
+                    <item name="sortOrder" xsi:type="string">20</item>
+                </item>
+                <item name="video_path" xsi:type="array">
+                    <item name="object" xsi:type="object">Hryvinskyi\BannerSliderAdminUi\Model\DataProvider\Banner\PrepareVideoToArray</item>
+                    <item name="sortOrder" xsi:type="string">20</item>
+                </item>
+            </argument>
+        </arguments>
+    </virtualType>
+
+    <type name="Hryvinskyi\BannerSliderAdminUi\Ui\DataProvider\Banner\FormDataProvider">
+        <arguments>
+            <argument name="prepareDataProcessor" xsi:type="object">Hryvinskyi\BannerSliderAdminUi\Model\DataProvider\Banner\PrepareDataAfterLoadProcessor</argument>
+        </arguments>
+    </type>
+
+    <!-- Slider PrepareDataProcessor Configuration -->
+    <virtualType name="Hryvinskyi\BannerSliderAdminUi\Model\DataProvider\Slider\PrepareDataBeforeSaveProcessor"
+                 type="Hryvinskyi\BannerSliderAdminUi\Model\DataProvider\PrepareDataProcessor">
+        <arguments>
+            <argument name="items" xsi:type="array">
+            </argument>
+        </arguments>
+    </virtualType>
+
+    <type name="Hryvinskyi\BannerSliderAdminUi\Controller\Adminhtml\Slider\Save">
+        <arguments>
+            <argument name="prepareDataProcessor" xsi:type="object">Hryvinskyi\BannerSliderAdminUi\Model\DataProvider\Slider\PrepareDataBeforeSaveProcessor</argument>
+        </arguments>
+    </type>
+
+    <!-- Breakpoint Image Uploader Virtual Type -->
+    <virtualType name="Hryvinskyi\BannerSliderAdminUi\Model\BreakpointImageUploader" type="Hryvinskyi\MediaUploader\Model\FileUploader">
+        <arguments>
+            <argument name="baseTmpPath" xsi:type="string">banner_slider/tmp/breakpoint</argument>
+            <argument name="basePath" xsi:type="string">banner_slider/breakpoint</argument>
+            <argument name="allowedExtensions" xsi:type="array">
+                <item name="gif" xsi:type="string">gif</item>
+                <item name="png" xsi:type="string">png</item>
+                <item name="jpg" xsi:type="string">jpg</item>
+                <item name="jpeg" xsi:type="string">jpeg</item>
+                <item name="webp" xsi:type="string">webp</item>
+            </argument>
+            <argument name="allowedMimeTypes" xsi:type="array">
+                <item name="gif" xsi:type="string">image/gif</item>
+                <item name="png" xsi:type="string">image/png</item>
+                <item name="jpg" xsi:type="string">image/jpg</item>
+                <item name="jpeg" xsi:type="string">image/jpeg</item>
+                <item name="webp" xsi:type="string">image/webp</item>
+            </argument>
+        </arguments>
+    </virtualType>
+
+    <type name="Hryvinskyi\BannerSliderAdminUi\Controller\Adminhtml\ResponsiveCrop\UploadBreakpointImage">
+        <arguments>
+            <argument name="fileUploader" xsi:type="object">Hryvinskyi\BannerSliderAdminUi\Model\BreakpointImageUploader</argument>
+        </arguments>
+    </type>
+
+
+    <!-- File Uploader Virtual Type with custom paths and allowed extensions -->
+    <virtualType name="Hryvinskyi\BannerSliderAdminUi\Model\MainImageFileUploader"
+                 type="Hryvinskyi\MediaUploader\Model\FileUploader">
+        <arguments>
+            <argument name="baseTmpPath" xsi:type="string">banner_slider/tmp/image</argument>
+            <argument name="basePath" xsi:type="string">banner_slider/image</argument>
+            <argument name="allowedExtensions" xsi:type="array">
+                <item name="gif" xsi:type="string">gif</item>
+                <item name="png" xsi:type="string">png</item>
+                <item name="jpg" xsi:type="string">jpg</item>
+                <item name="jpeg" xsi:type="string">jpeg</item>
+                <item name="webp" xsi:type="string">webp</item>
+                <item name="avif" xsi:type="string">avif</item>
+            </argument>
+            <argument name="allowedMimeTypes" xsi:type="array">
+                <item name="gif" xsi:type="string">image/gif</item>
+                <item name="png" xsi:type="string">image/png</item>
+                <item name="jpg" xsi:type="string">image/jpg</item>
+                <item name="jpeg" xsi:type="string">image/jpeg</item>
+                <item name="webp" xsi:type="string">image/webp</item>
+                <item name="avif" xsi:type="string">image/avif</item>
+            </argument>
+        </arguments>
+    </virtualType>
+
+    <!-- Upload Command Virtual Type using the configured FileUploader -->
+    <virtualType name="Hryvinskyi\BannerSliderAdminUi\Model\MainImageUploadCommand"
+                 type="Hryvinskyi\MediaUploader\Model\Command\Upload">
+        <arguments>
+            <argument name="fileUploader" xsi:type="object">Hryvinskyi\BannerSliderAdminUi\Model\MainImageFileUploader</argument>
+        </arguments>
+    </virtualType>
+
+    <!-- UploadImage Virtual Type implementing UploadImageInterface -->
+    <virtualType name="Hryvinskyi\BannerSliderAdminUi\Model\MainImageUploader"
+                 type="Hryvinskyi\BannerSlider\Model\UploadImage">
+        <arguments>
+            <argument name="commandUpload" xsi:type="object">Hryvinskyi\BannerSliderAdminUi\Model\MainImageUploadCommand</argument>
+        </arguments>
+    </virtualType>
+
+    <type name="Hryvinskyi\BannerSliderAdminUi\Controller\Adminhtml\Image\Upload">
+        <arguments>
+            <argument name="uploadImage" xsi:type="object">Hryvinskyi\BannerSliderAdminUi\Model\MainImageUploader</argument>
+        </arguments>
+    </type>
+</config>

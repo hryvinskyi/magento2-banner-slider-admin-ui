@@ -1,0 +1,184 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  ~ Copyright (c) 2025. Volodymyr Hryvinskyi. All rights reserved.
+  ~ @author: <mailto:volodymyr@hryvinskyi.com>
+  -->
+<listing xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:noNamespaceSchemaLocation="urn:magento:module:Magento_Ui:etc/ui_configuration.xsd">
+    <argument name="data" xsi:type="array">
+        <item name="js_config" xsi:type="array">
+            <item name="provider" xsi:type="string">hryvinskyi_banner_slider_banner_listing.hryvinskyi_banner_slider_banner_listing_data_source</item>
+        </item>
+    </argument>
+    <settings>
+        <spinner>hryvinskyi_banner_slider_banner_columns</spinner>
+        <deps>
+            <dep>hryvinskyi_banner_slider_banner_listing.hryvinskyi_banner_slider_banner_listing_data_source</dep>
+        </deps>
+        <buttons>
+            <button name="go_to_sliders">
+                <url path="banner_slider/slider/index"/>
+                <class>secondary</class>
+                <label translate="true">Go to Sliders</label>
+            </button>
+            <button name="add" class="Hryvinskyi\BannerSliderAdminUi\Block\Adminhtml\Banner\Listing\AddNewButton"/>
+        </buttons>
+    </settings>
+    <dataSource name="hryvinskyi_banner_slider_banner_listing_data_source" component="Magento_Ui/js/grid/provider">
+        <settings>
+            <storageConfig>
+                <param name="indexField" xsi:type="string">banner_id</param>
+            </storageConfig>
+            <updateUrl path="mui/index/render"/>
+            <filterUrlParams>
+                <param name="slider_id">*</param>
+            </filterUrlParams>
+        </settings>
+        <aclResource>Hryvinskyi_BannerSlider::banner</aclResource>
+        <dataProvider class="Magento\Framework\View\Element\UiComponent\DataProvider\DataProvider" name="hryvinskyi_banner_slider_banner_listing_data_source">
+            <settings>
+                <requestFieldName>banner_id</requestFieldName>
+                <primaryFieldName>banner_id</primaryFieldName>
+            </settings>
+        </dataProvider>
+    </dataSource>
+    <listingToolbar name="listing_top">
+        <settings>
+            <sticky>true</sticky>
+        </settings>
+        <bookmark name="bookmarks"/>
+        <columnsControls name="columns_controls"/>
+        <filterSearch name="fulltext"/>
+        <filters name="listing_filters">
+            <argument name="data" xsi:type="array">
+                <item name="config" xsi:type="array">
+                    <item name="templates" xsi:type="array">
+                        <item name="filters" xsi:type="array">
+                            <item name="select" xsi:type="array">
+                                <item name="component" xsi:type="string">Magento_Ui/js/form/element/ui-select</item>
+                                <item name="template" xsi:type="string">ui/grid/filters/elements/ui-select</item>
+                            </item>
+                        </item>
+                    </item>
+                </item>
+            </argument>
+        </filters>
+        <massaction name="listing_massaction" component="Magento_Ui/js/grid/tree-massactions">
+            <action name="delete">
+                <settings>
+                    <confirm>
+                        <message translate="true">Are you sure you want to delete selected banners?</message>
+                        <title translate="true">Delete Banners</title>
+                    </confirm>
+                    <url path="banner_slider/banner/massDelete"/>
+                    <type>delete</type>
+                    <label translate="true">Delete</label>
+                </settings>
+            </action>
+        </massaction>
+        <paging name="listing_paging"/>
+    </listingToolbar>
+    <columns name="hryvinskyi_banner_slider_banner_columns">
+        <settings>
+            <childDefaults>
+                <param name="fieldAction" xsi:type="array">
+                    <item name="provider" xsi:type="string">hryvinskyi_banner_slider_banner_listing.hryvinskyi_banner_slider_banner_listing.hryvinskyi_banner_slider_banner_columns.actions</item>
+                    <item name="target" xsi:type="string">applyAction</item>
+                    <item name="params" xsi:type="array">
+                        <item name="0" xsi:type="string">edit</item>
+                        <item name="1" xsi:type="string">${ $.$data.rowIndex }</item>
+                    </item>
+                </param>
+            </childDefaults>
+        </settings>
+        <selectionsColumn name="ids">
+            <settings>
+                <indexField>banner_id</indexField>
+            </settings>
+        </selectionsColumn>
+        <column name="banner_id">
+            <settings>
+                <filter>textRange</filter>
+                <label translate="true">ID</label>
+                <sorting>asc</sorting>
+            </settings>
+        </column>
+        <column name="image" class="Hryvinskyi\BannerSliderAdminUi\Ui\Listing\Column\Thumbnail" component="Magento_Ui/js/grid/columns/thumbnail">
+            <settings>
+                <altField>title</altField>
+                <hasPreview>1</hasPreview>
+                <label translate="true">Image</label>
+                <sortable>false</sortable>
+            </settings>
+        </column>
+        <column name="name">
+            <settings>
+                <filter>text</filter>
+                <label translate="true">Name</label>
+            </settings>
+        </column>
+        <column name="slider_id" component="Magento_Ui/js/grid/columns/select">
+            <settings>
+                <options class="Hryvinskyi\BannerSliderAdminUi\Model\Source\Slider"/>
+                <filter>select</filter>
+                <dataType>select</dataType>
+                <label translate="true">Slider</label>
+            </settings>
+        </column>
+        <column name="type" component="Magento_Ui/js/grid/columns/select">
+            <settings>
+                <options class="Hryvinskyi\BannerSliderAdminUi\Model\Source\BannerType"/>
+                <filter>select</filter>
+                <dataType>select</dataType>
+                <label translate="true">Type</label>
+            </settings>
+        </column>
+        <column name="status" component="Hryvinskyi_BannerSliderAdminUi/js/grid/columns/status">
+            <settings>
+                <options class="Hryvinskyi\BannerSliderAdminUi\Model\Source\Status"/>
+                <filter>select</filter>
+                <dataType>select</dataType>
+                <label translate="true">Status</label>
+            </settings>
+        </column>
+        <column name="position">
+            <settings>
+                <filter>textRange</filter>
+                <label translate="true">Position</label>
+            </settings>
+        </column>
+        <column name="link_url">
+            <settings>
+                <filter>text</filter>
+                <label translate="true">Link URL</label>
+                <visible>false</visible>
+            </settings>
+        </column>
+        <column name="from_date" class="Magento\Ui\Component\Listing\Columns\Date" component="Magento_Ui/js/grid/columns/date">
+            <settings>
+                <filter>dateRange</filter>
+                <dataType>date</dataType>
+                <label translate="true">From Date</label>
+            </settings>
+        </column>
+        <column name="to_date" class="Magento\Ui\Component\Listing\Columns\Date" component="Magento_Ui/js/grid/columns/date">
+            <settings>
+                <filter>dateRange</filter>
+                <dataType>date</dataType>
+                <label translate="true">To Date</label>
+            </settings>
+        </column>
+        <column name="updated_at" class="Magento\Ui\Component\Listing\Columns\Date" component="Magento_Ui/js/grid/columns/date">
+            <settings>
+                <filter>dateRange</filter>
+                <dataType>date</dataType>
+                <label translate="true">Modified</label>
+            </settings>
+        </column>
+        <actionsColumn name="actions" class="Hryvinskyi\BannerSliderAdminUi\Ui\Listing\Column\BannerActions">
+            <settings>
+                <indexField>banner_id</indexField>
+            </settings>
+        </actionsColumn>
+    </columns>
+</listing>

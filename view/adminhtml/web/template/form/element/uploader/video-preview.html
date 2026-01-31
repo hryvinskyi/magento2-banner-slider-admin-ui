@@ -1,0 +1,38 @@
+<!--
+  ~ Copyright (c) 2025. Volodymyr Hryvinskyi. All rights reserved.
+  ~ @author: <mailto:volodymyr@hryvinskyi.com>
+  -->
+<div class="file-uploader-summary video-uploader-summary">
+    <div class="file-uploader-preview video-uploader-preview">
+        <div class="video-preview-container" data-bind="style: {'aspect-ratio': $parent.aspectRatioStyle()}">
+            <video controls
+                   preload="metadata"
+                   class="video-preview"
+                   data-bind="attr: {
+                       src: $parent.getFilePreview($file),
+                       title: $file.name
+                   }">
+                <source data-bind="attr: {
+                    src: $parent.getFilePreview($file),
+                    type: $parent.getVideoMimeType($file)
+                }">
+                <!-- ko text: $t('Your browser does not support the video tag.') --><!-- /ko -->
+            </video>
+        </div>
+
+        <div class="actions">
+            <button type="button"
+                    class="action-remove"
+                    data-role="delete-button"
+                    data-bind="attr: {title: $t('Delete video')}, click: $parent.removeFile.bind($parent, $file)">
+                <span data-bind="i18n: 'Delete video'">Delete video</span>
+            </button>
+        </div>
+    </div>
+
+    <div class="file-uploader-filename" data-bind="text: $file.name"></div>
+
+    <div class="file-uploader-meta">
+        <!-- ko text: $parent.formatSize($file.size) --><!-- /ko -->
+    </div>
+</div>

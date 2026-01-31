@@ -1,0 +1,333 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  ~ Copyright (c) 2025. Volodymyr Hryvinskyi. All rights reserved.
+  ~ @author: <mailto:volodymyr@hryvinskyi.com>
+  -->
+<form xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+      xsi:noNamespaceSchemaLocation="urn:magento:module:Magento_Ui:etc/ui_configuration.xsd">
+    <argument name="data" xsi:type="array">
+        <item name="js_config" xsi:type="array">
+            <item name="provider" xsi:type="string">hryvinskyi_banner_slider_banner_form.hryvinskyi_banner_slider_banner_form_data_source</item>
+        </item>
+        <item name="label" xsi:type="string" translate="true">Banner Information</item>
+        <item name="template" xsi:type="string">templates/form/collapsible</item>
+    </argument>
+    <settings>
+        <buttons>
+            <button name="back" class="Hryvinskyi\BannerSliderAdminUi\Block\Adminhtml\Banner\Edit\BackButton"/>
+            <button name="delete" class="Hryvinskyi\BannerSliderAdminUi\Block\Adminhtml\Banner\Edit\DeleteButton"/>
+            <button name="save_and_generate_and_continue" class="Hryvinskyi\BannerSliderAdminUi\Block\Adminhtml\Banner\Edit\SaveAndContinueButton"/>
+            <button name="save_and_generate" class="Hryvinskyi\BannerSliderAdminUi\Block\Adminhtml\Banner\Edit\SaveButton"/>
+        </buttons>
+        <namespace>hryvinskyi_banner_slider_banner_form</namespace>
+        <dataScope>data</dataScope>
+        <deps>
+            <dep>hryvinskyi_banner_slider_banner_form.hryvinskyi_banner_slider_banner_form_data_source</dep>
+        </deps>
+    </settings>
+    <dataSource name="hryvinskyi_banner_slider_banner_form_data_source">
+        <argument name="data" xsi:type="array">
+            <item name="js_config" xsi:type="array">
+                <item name="component" xsi:type="string">Magento_Ui/js/form/provider</item>
+            </item>
+        </argument>
+        <settings>
+            <submitUrl path="banner_slider/banner/save"/>
+        </settings>
+        <dataProvider class="Hryvinskyi\BannerSliderAdminUi\Ui\DataProvider\Banner\FormDataProvider" name="hryvinskyi_banner_slider_banner_form_data_source">
+            <settings>
+                <requestFieldName>banner_id</requestFieldName>
+                <primaryFieldName>banner_id</primaryFieldName>
+            </settings>
+        </dataProvider>
+    </dataSource>
+    <fieldset name="general">
+        <settings>
+            <label translate="true">General Settings</label>
+        </settings>
+        <field name="banner_id" formElement="input">
+            <settings>
+                <dataType>text</dataType>
+                <visible>false</visible>
+            </settings>
+        </field>
+        <field name="name" formElement="input">
+            <settings>
+                <validation>
+                    <rule name="required-entry" xsi:type="boolean">true</rule>
+                </validation>
+                <dataType>text</dataType>
+                <label translate="true">Name</label>
+            </settings>
+        </field>
+        <field name="status" formElement="checkbox">
+            <argument name="data" xsi:type="array">
+                <item name="config" xsi:type="array">
+                    <item name="default" xsi:type="number">1</item>
+                </item>
+            </argument>
+            <settings>
+                <dataType>boolean</dataType>
+                <label translate="true">Enabled</label>
+            </settings>
+            <formElements>
+                <checkbox>
+                    <settings>
+                        <valueMap>
+                            <map name="false" xsi:type="number">0</map>
+                            <map name="true" xsi:type="number">1</map>
+                        </valueMap>
+                        <prefer>toggle</prefer>
+                    </settings>
+                </checkbox>
+            </formElements>
+        </field>
+        <field name="slider_id" formElement="select">
+            <settings>
+                <validation>
+                    <rule name="required-entry" xsi:type="boolean">true</rule>
+                </validation>
+                <dataType>int</dataType>
+                <label translate="true">Slider</label>
+            </settings>
+            <formElements>
+                <select>
+                    <settings>
+                        <options class="Hryvinskyi\BannerSliderAdminUi\Model\Source\Slider"/>
+                    </settings>
+                </select>
+            </formElements>
+        </field>
+        <field name="type" formElement="select">
+            <settings>
+                <dataType>int</dataType>
+                <label translate="true">Banner Type</label>
+            </settings>
+            <formElements>
+                <select>
+                    <settings>
+                        <options class="Hryvinskyi\BannerSliderAdminUi\Model\Source\BannerType"/>
+                    </settings>
+                </select>
+            </formElements>
+        </field>
+        <field name="position" formElement="input">
+            <argument name="data" xsi:type="array">
+                <item name="config" xsi:type="array">
+                    <item name="default" xsi:type="number">0</item>
+                </item>
+            </argument>
+            <settings>
+                <validation>
+                    <rule name="validate-digits" xsi:type="boolean">true</rule>
+                </validation>
+                <dataType>number</dataType>
+                <label translate="true">Position</label>
+            </settings>
+        </field>
+        <field name="from_date" formElement="date">
+            <settings>
+                <dataType>string</dataType>
+                <label translate="true">From Date</label>
+            </settings>
+        </field>
+        <field name="to_date" formElement="date">
+            <settings>
+                <dataType>string</dataType>
+                <label translate="true">To Date</label>
+            </settings>
+        </field>
+    </fieldset>
+    <fieldset name="image_settings">
+        <settings>
+            <label translate="true">Image Settings</label>
+            <collapsible>true</collapsible>
+        </settings>
+        <field name="image" formElement="imageUploader">
+            <settings>
+                <label translate="true">Desktop Image</label>
+                <componentType>imageUploader</componentType>
+                <notice translate="true">This image serves as the default source for all responsive breakpoints. You can upload different images for specific breakpoints below.</notice>
+            </settings>
+            <formElements>
+                <imageUploader>
+                    <settings>
+                        <allowedExtensions>jpg jpeg png gif webp</allowedExtensions>
+                        <maxFileSize>10485760</maxFileSize>
+                        <uploaderConfig>
+                            <param xsi:type="url" name="url" path="banner_slider/image/upload"/>
+                        </uploaderConfig>
+                    </settings>
+                </imageUploader>
+            </formElements>
+        </field>
+        <field name="title" formElement="input">
+            <settings>
+                <dataType>text</dataType>
+                <label translate="true">Title / Alt Text</label>
+            </settings>
+        </field>
+        <field name="is_preload" formElement="checkbox">
+            <argument name="data" xsi:type="array">
+                <item name="config" xsi:type="array">
+                    <item name="default" xsi:type="number">0</item>
+                </item>
+            </argument>
+            <settings>
+                <dataType>boolean</dataType>
+                <label translate="true">Preload Image</label>
+                <notice translate="true">Add preload link in head for improved LCP performance. Enable only for above-the-fold banner images.</notice>
+            </settings>
+            <formElements>
+                <checkbox>
+                    <settings>
+                        <valueMap>
+                            <map name="false" xsi:type="number">0</map>
+                            <map name="true" xsi:type="number">1</map>
+                        </valueMap>
+                        <prefer>toggle</prefer>
+                    </settings>
+                </checkbox>
+            </formElements>
+        </field>
+        <container name="responsive_cropper_container" template="ui/form/components/complex">
+            <argument name="data" xsi:type="array">
+                <item name="config" xsi:type="array">
+                    <item name="label" xsi:type="string" translate="true">Responsive Images</item>
+                    <item name="component" xsi:type="string">Hryvinskyi_BannerSliderAdminUi/js/form/components/responsive-cropper</item>
+                    <item name="template" xsi:type="string">Hryvinskyi_BannerSliderAdminUi/form/responsive-cropper</item>
+                </item>
+            </argument>
+        </container>
+    </fieldset>
+    <fieldset name="video_settings">
+        <settings>
+            <label translate="true">Video Settings</label>
+            <collapsible>true</collapsible>
+        </settings>
+        <field name="video_url" formElement="input">
+            <settings>
+                <dataType>text</dataType>
+                <label translate="true">Video URL</label>
+                <notice translate="true">YouTube or Vimeo URL</notice>
+            </settings>
+        </field>
+        <field name="video_aspect_ratio" formElement="select">
+            <argument name="data" xsi:type="array">
+                <item name="config" xsi:type="array">
+                    <item name="default" xsi:type="string">16:9</item>
+                </item>
+            </argument>
+            <settings>
+                <dataType>text</dataType>
+                <label translate="true">Aspect Ratio</label>
+            </settings>
+            <formElements>
+                <select>
+                    <settings>
+                        <options class="Hryvinskyi\BannerSliderAdminUi\Model\Source\AspectRatio"/>
+                    </settings>
+                </select>
+            </formElements>
+        </field>
+        <field name="video_path" formElement="imageUploader">
+            <argument name="data" xsi:type="array">
+                <item name="config" xsi:type="array">
+                    <item name="component" xsi:type="string">Hryvinskyi_BannerSliderAdminUi/js/form/element/video-uploader</item>
+                </item>
+            </argument>
+            <settings>
+                <label translate="true">Local Video File</label>
+                <componentType>imageUploader</componentType>
+                <notice translate="true">Upload MP4 or WebM video file. Maximum file size: 100 MB.</notice>
+            </settings>
+            <formElements>
+                <imageUploader>
+                    <settings>
+                        <allowedExtensions>mp4 webm</allowedExtensions>
+                        <maxFileSize>104857600</maxFileSize>
+                        <uploaderConfig>
+                            <param xsi:type="url" name="url" path="banner_slider/video/upload"/>
+                        </uploaderConfig>
+                    </settings>
+                </imageUploader>
+            </formElements>
+        </field>
+        <field name="video_as_background" formElement="checkbox">
+            <argument name="data" xsi:type="array">
+                <item name="config" xsi:type="array">
+                    <item name="default" xsi:type="number">0</item>
+                </item>
+            </argument>
+            <settings>
+                <dataType>boolean</dataType>
+                <label translate="true">Video as Background</label>
+                <notice translate="true">When enabled, video will autoplay muted, loop continuously, hide controls, and display Custom Content as overlay.</notice>
+            </settings>
+            <formElements>
+                <checkbox>
+                    <settings>
+                        <valueMap>
+                            <map name="false" xsi:type="number">0</map>
+                            <map name="true" xsi:type="number">1</map>
+                        </valueMap>
+                        <prefer>toggle</prefer>
+                    </settings>
+                </checkbox>
+            </formElements>
+        </field>
+    </fieldset>
+    <fieldset name="link_settings">
+        <settings>
+            <label translate="true">Link Settings</label>
+            <collapsible>true</collapsible>
+        </settings>
+        <field name="link_url" formElement="input">
+            <settings>
+                <dataType>text</dataType>
+                <label translate="true">Link URL</label>
+            </settings>
+        </field>
+        <field name="open_in_new_tab" formElement="checkbox">
+            <argument name="data" xsi:type="array">
+                <item name="config" xsi:type="array">
+                    <item name="default" xsi:type="number">1</item>
+                </item>
+            </argument>
+            <settings>
+                <dataType>boolean</dataType>
+                <label translate="true">Open in New Tab</label>
+            </settings>
+            <formElements>
+                <checkbox>
+                    <settings>
+                        <valueMap>
+                            <map name="false" xsi:type="number">0</map>
+                            <map name="true" xsi:type="number">1</map>
+                        </valueMap>
+                        <prefer>toggle</prefer>
+                    </settings>
+                </checkbox>
+            </formElements>
+        </field>
+    </fieldset>
+    <fieldset name="custom_content">
+        <settings>
+            <label translate="true">Custom Content</label>
+            <collapsible>true</collapsible>
+        </settings>
+        <field name="content" formElement="wysiwyg">
+            <settings>
+                <dataType>text</dataType>
+                <label translate="true">Content</label>
+            </settings>
+            <formElements>
+                <wysiwyg>
+                    <settings>
+                        <wysiwyg>true</wysiwyg>
+                    </settings>
+                </wysiwyg>
+            </formElements>
+        </field>
+    </fieldset>
+</form>

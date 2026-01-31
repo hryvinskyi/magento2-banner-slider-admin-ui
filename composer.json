@@ -1,0 +1,28 @@
+{
+    "name": "hryvinskyi/magento2-banner-slider-admin-ui",
+    "description": "Banner Slider Admin UI module - admin interface components",
+    "type": "magento2-module",
+    "license": "MIT",
+    "authors": [
+        {
+            "name": "Volodymyr Hryvinskyi",
+            "email": "volodymyr@hryvinskyi.com"
+        }
+    ],
+    "require": {
+        "php": "^8.1",
+        "magento/framework": "*",
+        "magento/module-ui": "*",
+        "magento/module-backend": "*",
+        "hryvinskyi/magento2-banner-slider-api": "*",
+        "hryvinskyi/magento2-banner-slider": "*"
+    },
+    "autoload": {
+        "files": [
+            "registration.php"
+        ],
+        "psr-4": {
+            "Hryvinskyi\\BannerSliderAdminUi\\": ""
+        }
+    }
+}

@@ -1,0 +1,61 @@
+<?xml version="1.0"?>
+<!--
+  ~ Copyright (c) 2025. Volodymyr Hryvinskyi. All rights reserved.
+  ~ @author: <mailto:volodymyr@hryvinskyi.com>
+  -->
+<config xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:noNamespaceSchemaLocation="urn:magento:framework:ObjectManager/etc/config.xsd">
+
+    <!-- Data Provider Interface Preferences -->
+    <preference for="Hryvinskyi\BannerSliderAdminUi\Api\DataProvider\PrepareDataProcessorInterface"
+                type="Hryvinskyi\BannerSliderAdminUi\Model\DataProvider\PrepareDataProcessor"/>
+
+    <!-- UI Component Data Provider Configuration -->
+    <type name="Magento\Framework\View\Element\UiComponent\DataProvider\CollectionFactory">
+        <arguments>
+            <argument name="collections" xsi:type="array">
+                <item name="hryvinskyi_banner_slider_slider_listing_data_source"
+                      xsi:type="string">Hryvinskyi\BannerSlider\Model\ResourceModel\Slider\Grid\Collection</item>
+                <item name="hryvinskyi_banner_slider_banner_listing_data_source"
+                      xsi:type="string">Hryvinskyi\BannerSlider\Model\ResourceModel\Banner\Grid\Collection</item>
+            </argument>
+        </arguments>
+    </type>
+
+    <!-- Grid Collection Virtual Types -->
+    <virtualType name="Hryvinskyi\BannerSlider\Model\ResourceModel\Slider\Grid\Collection"
+                 type="Magento\Framework\View\Element\UiComponent\DataProvider\SearchResult">
+        <arguments>
+            <argument name="mainTable" xsi:type="string">hryvinskyi_banner_slider</argument>
+            <argument name="resourceModel" xsi:type="string">Hryvinskyi\BannerSlider\Model\ResourceModel\Slider</argument>
+        </arguments>
+    </virtualType>
+
+    <virtualType name="Hryvinskyi\BannerSlider\Model\ResourceModel\Banner\Grid\Collection"
+                 type="Magento\Framework\View\Element\UiComponent\DataProvider\SearchResult">
+        <arguments>
+            <argument name="mainTable" xsi:type="string">hryvinskyi_banner_slider_banner</argument>
+            <argument name="resourceModel" xsi:type="string">Hryvinskyi\BannerSlider\Model\ResourceModel\Banner</argument>
+        </arguments>
+    </virtualType>
+
+    <!-- Banner Form Modifier Pool -->
+    <virtualType name="Hryvinskyi\BannerSliderAdminUi\Ui\DataProvider\Banner\Form\Modifier\Pool"
+                 type="Magento\Ui\DataProvider\Modifier\Pool">
+        <arguments>
+            <argument name="modifiers" xsi:type="array">
+                <item name="responsive_cropper" xsi:type="array">
+                    <item name="class" xsi:type="string">Hryvinskyi\BannerSliderAdminUi\Ui\DataProvider\Banner\Modifier\ResponsiveCropperModifier</item>
+                    <item name="sortOrder" xsi:type="number">10</item>
+                </item>
+            </argument>
+        </arguments>
+    </virtualType>
+
+    <!-- Banner Form Data Provider Configuration -->
+    <type name="Hryvinskyi\BannerSliderAdminUi\Ui\DataProvider\Banner\FormDataProvider">
+        <arguments>
+            <argument name="pool" xsi:type="object">Hryvinskyi\BannerSliderAdminUi\Ui\DataProvider\Banner\Form\Modifier\Pool</argument>
+        </arguments>
+    </type>
+</config>

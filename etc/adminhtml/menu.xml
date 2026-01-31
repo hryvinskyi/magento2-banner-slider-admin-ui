@@ -1,0 +1,30 @@
+<?xml version="1.0"?>
+<!--
+  ~ Copyright (c) 2025. Volodymyr Hryvinskyi. All rights reserved.
+  ~ @author: <mailto:volodymyr@hryvinskyi.com>
+  -->
+<config xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:noNamespaceSchemaLocation="urn:magento:module:Magento_Backend:etc/menu.xsd">
+    <menu>
+        <add id="Hryvinskyi_BannerSlider::banner_slider"
+             title="Banner Slider"
+             module="Hryvinskyi_BannerSliderAdminUi"
+             sortOrder="50"
+             parent="Magento_Backend::content"
+             resource="Hryvinskyi_BannerSlider::banner_slider"/>
+        <add id="Hryvinskyi_BannerSlider::slider"
+             title="Sliders"
+             module="Hryvinskyi_BannerSliderAdminUi"
+             sortOrder="10"
+             parent="Hryvinskyi_BannerSlider::banner_slider"
+             action="banner_slider/slider/index"
+             resource="Hryvinskyi_BannerSlider::slider"/>
+        <add id="Hryvinskyi_BannerSlider::banner"
+             title="Banners"
+             module="Hryvinskyi_BannerSliderAdminUi"
+             sortOrder="20"
+             parent="Hryvinskyi_BannerSlider::banner_slider"
+             action="banner_slider/banner/index"
+             resource="Hryvinskyi_BannerSlider::banner"/>
+    </menu>
+</config>

@@ -1,0 +1,275 @@
+<!--
+  ~ Copyright (c) 2025. Volodymyr Hryvinskyi. All rights reserved.
+  ~ @author: <mailto:volodymyr@hryvinskyi.com>
+  -->
+<div class="responsive-cropper-container" data-bind="visible: breakpoints().length > 0">
+    <!-- Loading Overlay -->
+    <div class="loading-mask" data-bind="visible: isLoading()">
+        <div class="loader">
+            <img src="" data-bind="attr: {src: require.toUrl('images/loader-2.gif')}" alt="Loading..."/>
+        </div>
+    </div>
+
+    <!-- Compression Progress Overlay -->
+    <div class="compression-overlay" data-bind="visible: isCompressing()">
+        <div class="compression-progress-container">
+            <div class="compression-progress-header">
+                <span data-bind="i18n: 'Compressing Images'"></span>
+            </div>
+            <div class="compression-progress-bar-wrapper">
+                <div class="compression-progress-bar" data-bind="style: {width: compressionProgress() + '%'}"></div>
+            </div>
+            <div class="compression-progress-info">
+                <span class="compression-percentage" data-bind="text: compressionProgress() + '%'"></span>
+                <span class="compression-message" data-bind="text: compressionMessage()"></span>
+            </div>
+        </div>
+    </div>
+
+    <!-- Browser Compatibility Warning -->
+    <div class="wasm-warning" data-bind="visible: !useBrowserCompression">
+        <span class="warning-icon">⚠</span>
+        <span data-bind="i18n: 'WebAssembly not supported. Using server-side compression as fallback.'"></span>
+    </div>
+
+    <!-- Upload Overlay -->
+    <div class="upload-overlay" data-bind="visible: isUploading()">
+        <div class="upload-progress-container">
+            <div class="upload-progress-header">
+                <span data-bind="i18n: 'Uploading Image...'"></span>
+            </div>
+            <div class="upload-spinner">
+                <img src="" data-bind="attr: {src: require.toUrl('images/loader-2.gif')}" alt="Uploading..."/>
+            </div>
+        </div>
+    </div>
+
+    <!-- Breakpoint Tabs -->
+    <div class="breakpoint-tabs">
+        <ul class="tabs-navigation">
+            <!-- ko foreach: breakpoints -->
+            <li data-bind="css: {'active': $parent.isActiveBreakpoint($data)}, click: function() { $parent.setActiveBreakpoint($data); }">
+                <span class="tab-title" data-bind="text: name"></span>
+                <span class="tab-dimension" data-bind="text: $parent.getDimensionText($data)"></span>
+            </li>
+            <!-- /ko -->
+        </ul>
+    </div>
+
+    <!-- Active Breakpoint Content -->
+    <div class="breakpoint-content" data-bind="with: activeBreakpoint">
+        <div class="breakpoint-info">
+            <span class="label" data-bind="i18n: 'Target Size:'"></span>
+            <span class="value" data-bind="text: $parent.getDimensionText($data)"></span>
+            <span class="separator">|</span>
+            <span class="label" data-bind="i18n: 'Media Query:'"></span>
+            <span class="value media-query" data-bind="text: media_query"></span>
+        </div>
+
+        <!-- Image Source Section -->
+        <div class="image-source-section">
+            <div class="image-source-section-header">
+                <h4 data-bind="i18n: 'Image Source'"></h4>
+                <!-- Current Source Indicator -->
+                <div class="current-source-indicator">
+                    <!-- ko if: $parent.hasCustomBreakpointImage(breakpoint_id) -->
+                    <span class="source-badge custom-source">
+                        <span data-bind="i18n: 'Custom Image'"></span>
+                    </span>
+                    <!-- /ko -->
+                    <!-- ko ifnot: $parent.hasCustomBreakpointImage(breakpoint_id) -->
+                    <span class="source-badge desktop-source">
+                        <span data-bind="i18n: 'Using Desktop Image'"></span>
+                    </span>
+                    <!-- /ko -->
+                </div>
+            </div>
+            <div class="image-source-controls">
+                <!-- Upload Custom Image Button -->
+                <div class="image-source-actions">
+                    <input type="file"
+                           accept="image/jpeg,image/png,image/gif,image/webp"
+                           style="display: none;"
+                           data-bind="attr: { id: 'breakpoint-image-upload-' + breakpoint_id },
+                                      event: { change: function(data, event) { $parent.handleBreakpointImageUpload($data, data, event); } }"/>
+                    <button type="button" class="action-secondary"
+                            data-bind="click: function() { $parent.triggerBreakpointImageUpload($data); }">
+                        <span data-bind="i18n: $parent.hasCustomBreakpointImage(breakpoint_id) ? 'Change Custom Image' : 'Upload Custom Image'"></span>
+                    </button>
+
+                    <!-- Revert to Desktop Button (only visible when custom image is set) -->
+                    <!-- ko if: $parent.hasCustomBreakpointImage(breakpoint_id) && $parent.desktopImageUrl() -->
+                    <button type="button" class="action-tertiary"
+                            data-bind="click: function() { $parent.clearBreakpointImage(breakpoint_id); }">
+                        <span data-bind="i18n: 'Use Desktop Image'"></span>
+                    </button>
+                    <!-- /ko -->
+                </div>
+            </div>
+            <p class="image-source-hint" data-bind="i18n: 'Upload a custom image for this breakpoint, or use the Desktop Image as the source for cropping.'"></p>
+        </div>
+
+        <!-- No Image Message -->
+        <div class="no-source-image-message" data-bind="visible: !$parent.hasSourceImage(breakpoint_id)">
+            <p data-bind="i18n: 'Please upload a Desktop Image above or a custom image for this breakpoint.'"></p>
+        </div>
+
+        <!-- Cropper Area -->
+        <div class="cropper-area" data-bind="visible: $parent.hasSourceImage(breakpoint_id)">
+            <h4 data-bind="i18n: 'Crop Area'"></h4>
+            <div class="cropper-container">
+                <img data-bind="attr: { src: $parent.getBreakpointSourceImageUrl(breakpoint_id) },
+                               event: { load: function(data, event) { $parent.initCropper(event.target, $data); } }"
+                     alt="Source Image"/>
+            </div>
+        </div>
+
+        <!-- Quality Settings -->
+        <div class="quality-settings" data-bind="visible: $parent.hasSourceImage(breakpoint_id)">
+            <h4 data-bind="i18n: 'Image Format Settings'"></h4>
+
+            <div class="format-option" data-bind="visible: $parent.webpSupported">
+                <label>
+                    <input type="checkbox"
+                           data-bind="checked: $parent.getCropData(breakpoint_id).generate_webp !== false,
+                                      click: function() { $parent.toggleWebP($data); return true; }"/>
+                    <span data-bind="i18n: 'Generate WebP'"></span>
+                </label>
+                <div class="quality-slider" data-bind="visible: $parent.getCropData(breakpoint_id).generate_webp !== false">
+                    <label data-bind="i18n: 'WebP Quality:'"></label>
+                    <input type="range" min="1" max="100"
+                           data-bind="value: $parent.getCropData(breakpoint_id).webp_quality || 85,
+                                      event: { change: function(data, event) { $parent.updateWebpQuality($data, data, event); } }"/>
+                    <span data-bind="text: $parent.getCropData(breakpoint_id).webp_quality || 85"></span>
+                    <!-- ko if: $parent.previewUrls() && $parent.previewUrls().webp -->
+                    <span class="preview-size" data-bind="text: '(' + $parent.previewUrls().webp.formattedSize + ')'"></span>
+                    <!-- /ko -->
+                </div>
+            </div>
+
+            <div class="format-option" data-bind="visible: $parent.avifSupported">
+                <label>
+                    <input type="checkbox"
+                           data-bind="checked: $parent.getCropData(breakpoint_id).generate_avif === true,
+                                      click: function() { $parent.toggleAvif($data); return true; }"/>
+                    <span data-bind="i18n: 'Generate AVIF'"></span>
+                </label>
+                <div class="quality-slider" data-bind="visible: $parent.getCropData(breakpoint_id).generate_avif === true">
+                    <label data-bind="i18n: 'AVIF Quality:'"></label>
+                    <input type="range" min="1" max="100"
+                           data-bind="value: $parent.getCropData(breakpoint_id).avif_quality || 80,
+                                      event: { change: function(data, event) { $parent.updateAvifQuality($data, data, event); } }"/>
+                    <span data-bind="text: $parent.getCropData(breakpoint_id).avif_quality || 80"></span>
+                    <!-- ko if: $parent.previewUrls() && $parent.previewUrls().avif -->
+                    <span class="preview-size" data-bind="text: '(' + $parent.previewUrls().avif.formattedSize + ')'"></span>
+                    <!-- /ko -->
+                </div>
+            </div>
+        </div>
+
+        <!-- Image Comparison Toggle -->
+        <div class="image-comparison-toggle" data-bind="visible: $parent.getCropData(breakpoint_id).cropped_image_url">
+            <label class="comparison-checkbox-label">
+                <input type="checkbox" data-bind="checked: $parent.showComparison"/>
+                <span data-bind="i18n: 'Show Quality Comparison'"></span>
+            </label>
+        </div>
+
+        <!-- Image Comparison Slider -->
+        <div class="image-comparison-section" data-bind="visible: $parent.getCropData(breakpoint_id).cropped_image_url && $parent.showComparison()">
+            <h4 data-bind="i18n: 'Quality Comparison'"></h4>
+            <div class="comparison-tabs">
+                <button type="button" class="comparison-tab"
+                        data-bind="css: {'active': $parent.comparisonMode() === 'webp'},
+                                   click: function() { $parent.setComparisonMode('webp'); },
+                                   visible: $parent.getCropData(breakpoint_id).webp_image_url">
+                    <span>Original vs WebP</span>
+                </button>
+                <button type="button" class="comparison-tab"
+                        data-bind="css: {'active': $parent.comparisonMode() === 'avif'},
+                                   click: function() { $parent.setComparisonMode('avif'); },
+                                   visible: $parent.getCropData(breakpoint_id).avif_image_url">
+                    <span>Original vs AVIF</span>
+                </button>
+            </div>
+            <div class="image-comparison-wrapper">
+                <img-comparison-slider value="50">
+                    <!-- ko if: $parent.comparisonMode() === 'webp' && $parent.getCropData(breakpoint_id).webp_image_url -->
+                    <img slot="first"
+                         data-bind="attr: { src: $parent.getCropData(breakpoint_id).webp_image_url }"
+                         alt="WebP"/>
+                    <!-- /ko -->
+                    <!-- ko if: $parent.comparisonMode() === 'avif' && $parent.getCropData(breakpoint_id).avif_image_url -->
+                    <img slot="first"
+                         data-bind="attr: { src: $parent.getCropData(breakpoint_id).avif_image_url }"
+                         alt="AVIF"/>
+                    <!-- /ko -->
+                    <img slot="second"
+                         data-bind="attr: { src: $parent.getCropData(breakpoint_id).cropped_image_url }"
+                         alt="Original"/>
+                </img-comparison-slider>
+            </div>
+            <div class="comparison-labels">
+                <span class="label-left" data-bind="text: $parent.comparisonMode() === 'webp' ? 'WebP' : 'AVIF'"></span>
+                <span class="label-right" data-bind="i18n: 'Original'"></span>
+            </div>
+
+            <!-- File Size Information -->
+            <div class="comparison-sizes" data-bind="visible: $parent.getCropData(breakpoint_id).original_size">
+                <div class="size-info">
+                    <div class="size-item original">
+                        <span class="size-label" data-bind="i18n: 'Original:'"></span>
+                        <span class="size-value" data-bind="text: $parent.formatFileSize($parent.getCropData(breakpoint_id).original_size)"></span>
+                    </div>
+                    <!-- ko if: $parent.comparisonMode() === 'webp' && $parent.getCropData(breakpoint_id).webp_size -->
+                    <div class="size-item optimized">
+                        <span class="size-label">WebP:</span>
+                        <span class="size-value" data-bind="text: $parent.formatFileSize($parent.getCropData(breakpoint_id).webp_size)"></span>
+                        <span class="size-savings" data-bind="text: '(' + $parent.calculateSavings($parent.getCropData(breakpoint_id).original_size, $parent.getCropData(breakpoint_id).webp_size) + ')', css: {'size-larger': $parent.getCropData(breakpoint_id).webp_size > $parent.getCropData(breakpoint_id).original_size}"></span>
+                    </div>
+                    <!-- /ko -->
+                    <!-- ko if: $parent.comparisonMode() === 'avif' && $parent.getCropData(breakpoint_id).avif_size -->
+                    <div class="size-item optimized">
+                        <span class="size-label">AVIF:</span>
+                        <span class="size-value" data-bind="text: $parent.formatFileSize($parent.getCropData(breakpoint_id).avif_size)"></span>
+                        <span class="size-savings" data-bind="text: '(' + $parent.calculateSavings($parent.getCropData(breakpoint_id).original_size, $parent.getCropData(breakpoint_id).avif_size) + ')', css: {'size-larger': $parent.getCropData(breakpoint_id).avif_size > $parent.getCropData(breakpoint_id).original_size}"></span>
+                    </div>
+                    <!-- /ko -->
+                </div>
+            </div>
+
+            <p class="comparison-hint" data-bind="i18n: 'Drag the slider to compare image quality'"></p>
+        </div>
+
+        <!-- Actions -->
+        <div class="crop-actions">
+            <span class="saving-indicator" data-bind="visible: $parent.isSaving()">
+                <span class="spinner"></span>
+                <span data-bind="i18n: 'Saving...'"></span>
+            </span>
+            <span class="saved-indicator" data-bind="visible: !$parent.isSaving() && $parent.getCropData(breakpoint_id).crop_id">
+                <span data-bind="i18n: 'Auto-saved'"></span>
+            </span>
+            <button type="button" class="action-primary"
+                    data-bind="click: function() { $parent.generateImages($data); },
+                               visible: $parent.getCropData(breakpoint_id).crop_id,
+                               i18n: 'Generate Images'"></button>
+        </div>
+    </div>
+
+    <!-- No breakpoint selected message -->
+    <div class="no-breakpoint-message" data-bind="visible: !activeBreakpoint()">
+        <p data-bind="i18n: 'Select a breakpoint tab above to configure responsive images.'"></p>
+    </div>
+
+    <!-- Generate All Button -->
+    <div class="generate-all-section" data-bind="visible: bannerId()">
+        <button type="button" class="action-primary"
+                data-bind="click: generateAllImages, i18n: 'Save & Generate All Images'"></button>
+    </div>
+</div>
+
+<!-- No breakpoints message -->
+<div class="no-breakpoints-message" data-bind="visible: breakpoints().length === 0">
+    <p data-bind="i18n: 'No breakpoints configured for this slider. Please configure breakpoints in the slider settings first.'"></p>
+</div>

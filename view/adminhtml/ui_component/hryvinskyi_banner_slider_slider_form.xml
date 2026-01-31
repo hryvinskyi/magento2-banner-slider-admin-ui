@@ -1,0 +1,569 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  ~ Copyright (c) 2025. Volodymyr Hryvinskyi. All rights reserved.
+  ~ @author: <mailto:volodymyr@hryvinskyi.com>
+  -->
+<form xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+      xsi:noNamespaceSchemaLocation="urn:magento:module:Magento_Ui:etc/ui_configuration.xsd">
+    <argument name="data" xsi:type="array">
+        <item name="js_config" xsi:type="array">
+            <item name="provider" xsi:type="string">hryvinskyi_banner_slider_slider_form.hryvinskyi_banner_slider_slider_form_data_source</item>
+        </item>
+        <item name="label" xsi:type="string" translate="true">Slider Information</item>
+        <item name="template" xsi:type="string">templates/form/collapsible</item>
+    </argument>
+    <settings>
+        <buttons>
+            <button name="back" class="Hryvinskyi\BannerSliderAdminUi\Block\Adminhtml\Slider\Edit\BackButton"/>
+            <button name="delete" class="Hryvinskyi\BannerSliderAdminUi\Block\Adminhtml\Slider\Edit\DeleteButton"/>
+            <button name="save" class="Hryvinskyi\BannerSliderAdminUi\Block\Adminhtml\Slider\Edit\SaveButton"/>
+            <button name="save_and_continue" class="Hryvinskyi\BannerSliderAdminUi\Block\Adminhtml\Slider\Edit\SaveAndContinueButton"/>
+        </buttons>
+        <namespace>hryvinskyi_banner_slider_slider_form</namespace>
+        <dataScope>data</dataScope>
+        <deps>
+            <dep>hryvinskyi_banner_slider_slider_form.hryvinskyi_banner_slider_slider_form_data_source</dep>
+        </deps>
+    </settings>
+    <dataSource name="hryvinskyi_banner_slider_slider_form_data_source">
+        <argument name="data" xsi:type="array">
+            <item name="js_config" xsi:type="array">
+                <item name="component" xsi:type="string">Magento_Ui/js/form/provider</item>
+            </item>
+        </argument>
+        <settings>
+            <submitUrl path="banner_slider/slider/save"/>
+        </settings>
+        <dataProvider class="Hryvinskyi\BannerSliderAdminUi\Ui\DataProvider\Slider\FormDataProvider" name="hryvinskyi_banner_slider_slider_form_data_source">
+            <settings>
+                <requestFieldName>slider_id</requestFieldName>
+                <primaryFieldName>slider_id</primaryFieldName>
+            </settings>
+        </dataProvider>
+    </dataSource>
+    <fieldset name="general">
+        <settings>
+            <label translate="true">General Settings</label>
+        </settings>
+        <field name="slider_id" formElement="input">
+            <settings>
+                <dataType>text</dataType>
+                <visible>false</visible>
+            </settings>
+        </field>
+        <field name="name" formElement="input">
+            <settings>
+                <validation>
+                    <rule name="required-entry" xsi:type="boolean">true</rule>
+                </validation>
+                <dataType>text</dataType>
+                <label translate="true">Name</label>
+            </settings>
+        </field>
+        <field name="status" formElement="checkbox">
+            <argument name="data" xsi:type="array">
+                <item name="config" xsi:type="array">
+                    <item name="default" xsi:type="number">1</item>
+                </item>
+            </argument>
+            <settings>
+                <dataType>boolean</dataType>
+                <label translate="true">Enabled</label>
+            </settings>
+            <formElements>
+                <checkbox>
+                    <settings>
+                        <valueMap>
+                            <map name="false" xsi:type="number">0</map>
+                            <map name="true" xsi:type="number">1</map>
+                        </valueMap>
+                        <prefer>toggle</prefer>
+                    </settings>
+                </checkbox>
+            </formElements>
+        </field>
+        <field name="location" formElement="input">
+            <settings>
+                <dataType>text</dataType>
+                <label translate="true">Location</label>
+                <notice translate="true">Unique identifier for widget placement</notice>
+            </settings>
+        </field>
+        <field name="priority" formElement="input">
+            <argument name="data" xsi:type="array">
+                <item name="config" xsi:type="array">
+                    <item name="default" xsi:type="number">0</item>
+                </item>
+            </argument>
+            <settings>
+                <validation>
+                    <rule name="validate-digits" xsi:type="boolean">true</rule>
+                </validation>
+                <dataType>number</dataType>
+                <label translate="true">Priority</label>
+                <notice translate="true">Lower value = higher priority</notice>
+            </settings>
+        </field>
+        <field name="store_ids" formElement="multiselect">
+            <settings>
+                <validation>
+                    <rule name="required-entry" xsi:type="boolean">true</rule>
+                </validation>
+                <dataType>int</dataType>
+                <label translate="true">Store View</label>
+            </settings>
+            <formElements>
+                <multiselect>
+                    <settings>
+                        <options class="Magento\Cms\Ui\Component\Listing\Column\Cms\Options"/>
+                    </settings>
+                </multiselect>
+            </formElements>
+        </field>
+        <field name="customer_group_ids" formElement="multiselect">
+            <settings>
+                <validation>
+                    <rule name="required-entry" xsi:type="boolean">true</rule>
+                </validation>
+                <dataType>int</dataType>
+                <label translate="true">Customer Groups</label>
+            </settings>
+            <formElements>
+                <multiselect>
+                    <settings>
+                        <options class="Magento\Customer\Model\Customer\Source\Group"/>
+                    </settings>
+                </multiselect>
+            </formElements>
+        </field>
+        <field name="from_date" formElement="date">
+            <argument name="data" xsi:type="array">
+                <item name="config" xsi:type="array">
+                    <item name="dataType" xsi:type="string">string</item>
+                    <item name="label" xsi:type="string" translate="true">From</item>
+                    <item name="formElement" xsi:type="string">date</item>
+                    <item name="source" xsi:type="string">slider</item>
+                    <item name="dataScope" xsi:type="string">from_date</item>
+                    <item name="options" xsi:type="array">
+                        <item name="dateFormat" xsi:type="string">yyyy-MM-dd</item>
+                        <item name="timeFormat" xsi:type="string">HH:mm:ss</item>
+                        <item name="showsTime" xsi:type="boolean">true</item>
+                    </item>
+                </item>
+            </argument>
+            <settings>
+                <validation>
+                    <rule name="validate-optional-datetime" xsi:type="boolean">true</rule>
+                </validation>
+            </settings>
+        </field>
+        <field name="to_date" formElement="date">
+            <argument name="data" xsi:type="array">
+                <item name="config" xsi:type="array">
+                    <item name="dataType" xsi:type="string">string</item>
+                    <item name="label" xsi:type="string" translate="true">To</item>
+                    <item name="formElement" xsi:type="string">date</item>
+                    <item name="source" xsi:type="string">slider</item>
+                    <item name="dataScope" xsi:type="string">to_date</item>
+                    <item name="options" xsi:type="array">
+                        <item name="dateFormat" xsi:type="string">yyyy-MM-dd</item>
+                        <item name="timeFormat" xsi:type="string">HH:mm:ss</item>
+                        <item name="showsTime" xsi:type="boolean">true</item>
+                    </item>
+                </item>
+            </argument>
+            <settings>
+                <validation>
+                    <rule name="validate-optional-datetime" xsi:type="boolean">true</rule>
+                </validation>
+            </settings>
+        </field>
+    </fieldset>
+    <fieldset name="slider_options">
+        <settings>
+            <label translate="true">Slider Options</label>
+            <collapsible>true</collapsible>
+        </settings>
+        <field name="effect" formElement="select">
+            <settings>
+                <dataType>text</dataType>
+                <label translate="true">Animation Effect</label>
+            </settings>
+            <formElements>
+                <select>
+                    <settings>
+                        <options class="Hryvinskyi\BannerSliderAdminUi\Model\Source\Effect"/>
+                    </settings>
+                </select>
+            </formElements>
+        </field>
+        <field name="auto_play" formElement="checkbox">
+            <argument name="data" xsi:type="array">
+                <item name="config" xsi:type="array">
+                    <item name="default" xsi:type="number">1</item>
+                </item>
+            </argument>
+            <settings>
+                <dataType>boolean</dataType>
+                <label translate="true">Autoplay</label>
+            </settings>
+            <formElements>
+                <checkbox>
+                    <settings>
+                        <valueMap>
+                            <map name="false" xsi:type="number">0</map>
+                            <map name="true" xsi:type="number">1</map>
+                        </valueMap>
+                        <prefer>toggle</prefer>
+                    </settings>
+                </checkbox>
+            </formElements>
+        </field>
+        <field name="auto_play_timeout" formElement="input">
+            <argument name="data" xsi:type="array">
+                <item name="config" xsi:type="array">
+                    <item name="default" xsi:type="number">5000</item>
+                </item>
+            </argument>
+            <settings>
+                <validation>
+                    <rule name="validate-digits" xsi:type="boolean">true</rule>
+                </validation>
+                <dataType>number</dataType>
+                <label translate="true">Autoplay Timeout (ms)</label>
+            </settings>
+        </field>
+        <field name="loop" formElement="checkbox">
+            <argument name="data" xsi:type="array">
+                <item name="config" xsi:type="array">
+                    <item name="default" xsi:type="number">1</item>
+                </item>
+            </argument>
+            <settings>
+                <dataType>boolean</dataType>
+                <label translate="true">Loop</label>
+            </settings>
+            <formElements>
+                <checkbox>
+                    <settings>
+                        <valueMap>
+                            <map name="false" xsi:type="number">0</map>
+                            <map name="true" xsi:type="number">1</map>
+                        </valueMap>
+                        <prefer>toggle</prefer>
+                    </settings>
+                </checkbox>
+            </formElements>
+        </field>
+        <field name="nav" formElement="checkbox">
+            <argument name="data" xsi:type="array">
+                <item name="config" xsi:type="array">
+                    <item name="default" xsi:type="number">1</item>
+                </item>
+            </argument>
+            <settings>
+                <dataType>boolean</dataType>
+                <label translate="true">Show Navigation Arrows</label>
+            </settings>
+            <formElements>
+                <checkbox>
+                    <settings>
+                        <valueMap>
+                            <map name="false" xsi:type="number">0</map>
+                            <map name="true" xsi:type="number">1</map>
+                        </valueMap>
+                        <prefer>toggle</prefer>
+                    </settings>
+                </checkbox>
+            </formElements>
+        </field>
+        <field name="dots" formElement="checkbox">
+            <argument name="data" xsi:type="array">
+                <item name="config" xsi:type="array">
+                    <item name="default" xsi:type="number">1</item>
+                </item>
+            </argument>
+            <settings>
+                <dataType>boolean</dataType>
+                <label translate="true">Show Pagination Dots</label>
+            </settings>
+            <formElements>
+                <checkbox>
+                    <settings>
+                        <valueMap>
+                            <map name="false" xsi:type="number">0</map>
+                            <map name="true" xsi:type="number">1</map>
+                        </valueMap>
+                        <prefer>toggle</prefer>
+                    </settings>
+                </checkbox>
+            </formElements>
+        </field>
+        <field name="lazy_load" formElement="checkbox">
+            <argument name="data" xsi:type="array">
+                <item name="config" xsi:type="array">
+                    <item name="default" xsi:type="number">1</item>
+                </item>
+            </argument>
+            <settings>
+                <dataType>boolean</dataType>
+                <label translate="true">Lazy Load Images</label>
+            </settings>
+            <formElements>
+                <checkbox>
+                    <settings>
+                        <valueMap>
+                            <map name="false" xsi:type="number">0</map>
+                            <map name="true" xsi:type="number">1</map>
+                        </valueMap>
+                        <prefer>toggle</prefer>
+                    </settings>
+                </checkbox>
+            </formElements>
+        </field>
+        <field name="preload_banners_count" formElement="input">
+            <argument name="data" xsi:type="array">
+                <item name="config" xsi:type="array">
+                    <item name="default" xsi:type="number">0</item>
+                </item>
+            </argument>
+            <settings>
+                <validation>
+                    <rule name="validate-digits" xsi:type="boolean">true</rule>
+                </validation>
+                <dataType>number</dataType>
+                <label translate="true">Preload First N Banners</label>
+                <notice translate="true">Add preload links in head for the first N banner images. Set to 0 to disable. Improves LCP for above-the-fold images.</notice>
+            </settings>
+        </field>
+        <field name="auto_width" formElement="checkbox">
+            <settings>
+                <dataType>boolean</dataType>
+                <label translate="true">Auto Width</label>
+            </settings>
+            <formElements>
+                <checkbox>
+                    <settings>
+                        <valueMap>
+                            <map name="false" xsi:type="number">0</map>
+                            <map name="true" xsi:type="number">1</map>
+                        </valueMap>
+                        <prefer>toggle</prefer>
+                    </settings>
+                </checkbox>
+            </formElements>
+        </field>
+        <field name="auto_height" formElement="checkbox">
+            <settings>
+                <dataType>boolean</dataType>
+                <label translate="true">Auto Height</label>
+            </settings>
+            <formElements>
+                <checkbox>
+                    <settings>
+                        <valueMap>
+                            <map name="false" xsi:type="number">0</map>
+                            <map name="true" xsi:type="number">1</map>
+                        </valueMap>
+                        <prefer>toggle</prefer>
+                    </settings>
+                </checkbox>
+            </formElements>
+        </field>
+    </fieldset>
+    <fieldset name="breakpoints">
+        <settings>
+            <label translate="true">Responsive Breakpoints</label>
+            <collapsible>true</collapsible>
+        </settings>
+        <container name="breakpoints_container" component="Magento_Ui/js/dynamic-rows/dynamic-rows"
+                   template="ui/dynamic-rows/templates/default">
+            <argument name="data" xsi:type="array">
+                <item name="config" xsi:type="array">
+                    <item name="addButtonLabel" xsi:type="string" translate="true">Add Breakpoint</item>
+                    <item name="additionalClasses" xsi:type="string">admin__field-wide</item>
+                    <item name="componentType" xsi:type="string">dynamicRows</item>
+                    <item name="deleteProperty" xsi:type="string">is_delete</item>
+                    <item name="identificationProperty" xsi:type="string">breakpoint_id</item>
+                    <item name="defaultRecord" xsi:type="boolean">false</item>
+                    <item name="dataScope" xsi:type="string">breakpoints</item>
+                </item>
+            </argument>
+            <container name="record" component="Magento_Ui/js/dynamic-rows/record">
+                <argument name="data" xsi:type="array">
+                    <item name="config" xsi:type="array">
+                        <item name="isTemplate" xsi:type="boolean">true</item>
+                        <item name="is_collection" xsi:type="boolean">true</item>
+                        <item name="componentType" xsi:type="string">container</item>
+                    </item>
+                </argument>
+                <field name="breakpoint_id" formElement="input">
+                    <settings>
+                        <dataType>text</dataType>
+                        <visible>false</visible>
+                    </settings>
+                </field>
+                <field name="is_delete" formElement="input">
+                    <settings>
+                        <dataType>text</dataType>
+                        <visible>false</visible>
+                    </settings>
+                </field>
+                <field name="name" formElement="input">
+                    <argument name="data" xsi:type="array">
+                        <item name="config" xsi:type="array">
+                            <item name="placeholder" xsi:type="string" translate="true">e.g., Desktop</item>
+                            <item name="tooltip" xsi:type="array">
+                                <item name="description" xsi:type="string" translate="true">Display name for the breakpoint (e.g., Desktop, Tablet, Mobile)</item>
+                            </item>
+                        </item>
+                    </argument>
+                    <settings>
+                        <validation>
+                            <rule name="required-entry" xsi:type="boolean">true</rule>
+                        </validation>
+                        <dataType>text</dataType>
+                        <label translate="true">Name</label>
+                    </settings>
+                </field>
+                <field name="identifier" formElement="input">
+                    <argument name="data" xsi:type="array">
+                        <item name="config" xsi:type="array">
+                            <item name="placeholder" xsi:type="string" translate="true">e.g., desktop</item>
+                            <item name="tooltip" xsi:type="array">
+                                <item name="description" xsi:type="string" translate="true">Unique key used in image filenames (lowercase, no spaces)</item>
+                            </item>
+                        </item>
+                    </argument>
+                    <settings>
+                        <validation>
+                            <rule name="required-entry" xsi:type="boolean">true</rule>
+                        </validation>
+                        <dataType>text</dataType>
+                        <label translate="true">Identifier</label>
+                    </settings>
+                </field>
+                <field name="media_query" formElement="input">
+                    <argument name="data" xsi:type="array">
+                        <item name="config" xsi:type="array">
+                            <item name="placeholder" xsi:type="string" translate="true">(min-width: 1200px)</item>
+                            <item name="tooltip" xsi:type="array">
+                                <item name="description" xsi:type="string" translate="true">CSS media query condition (e.g., "(min-width: 768px)" or "(max-width: 767px)")</item>
+                            </item>
+                        </item>
+                    </argument>
+                    <settings>
+                        <validation>
+                            <rule name="required-entry" xsi:type="boolean">true</rule>
+                        </validation>
+                        <dataType>text</dataType>
+                        <label translate="true">Media Query</label>
+                    </settings>
+                </field>
+                <field name="min_width" formElement="input">
+                    <argument name="data" xsi:type="array">
+                        <item name="config" xsi:type="array">
+                            <item name="default" xsi:type="number">0</item>
+                            <item name="placeholder" xsi:type="string" translate="true">e.g., 1200</item>
+                            <item name="tooltip" xsi:type="array">
+                                <item name="description" xsi:type="string" translate="true">Minimum viewport width in pixels. Used to order breakpoints (higher = larger screens)</item>
+                            </item>
+                        </item>
+                    </argument>
+                    <settings>
+                        <validation>
+                            <rule name="validate-digits" xsi:type="boolean">true</rule>
+                        </validation>
+                        <dataType>number</dataType>
+                        <label translate="true">Min Width</label>
+                    </settings>
+                </field>
+                <field name="target_width" formElement="input">
+                    <argument name="data" xsi:type="array">
+                        <item name="config" xsi:type="array">
+                            <item name="placeholder" xsi:type="string" translate="true">e.g., 1920</item>
+                            <item name="tooltip" xsi:type="array">
+                                <item name="description" xsi:type="string" translate="true">Output image width in pixels for this breakpoint</item>
+                            </item>
+                        </item>
+                    </argument>
+                    <settings>
+                        <validation>
+                            <rule name="required-entry" xsi:type="boolean">true</rule>
+                            <rule name="validate-digits" xsi:type="boolean">true</rule>
+                        </validation>
+                        <dataType>number</dataType>
+                        <label translate="true">Target Width</label>
+                    </settings>
+                </field>
+                <field name="target_height" formElement="input">
+                    <argument name="data" xsi:type="array">
+                        <item name="config" xsi:type="array">
+                            <item name="placeholder" xsi:type="string" translate="true">Auto</item>
+                            <item name="tooltip" xsi:type="array">
+                                <item name="description" xsi:type="string" translate="true">Output image height in pixels. Leave empty to calculate automatically based on original aspect ratio</item>
+                            </item>
+                        </item>
+                    </argument>
+                    <settings>
+                        <validation>
+                            <rule name="validate-digits" xsi:type="boolean">true</rule>
+                            <rule name="required-entry" xsi:type="boolean">false</rule>
+                        </validation>
+                        <dataType>number</dataType>
+                        <label translate="true">Target Height</label>
+                    </settings>
+                </field>
+                <field name="sort_order" formElement="input">
+                    <argument name="data" xsi:type="array">
+                        <item name="config" xsi:type="array">
+                            <item name="default" xsi:type="number">0</item>
+                            <item name="placeholder" xsi:type="string" translate="true">e.g., 10</item>
+                            <item name="tooltip" xsi:type="array">
+                                <item name="description" xsi:type="string" translate="true">Display order in admin. Lower values appear first</item>
+                            </item>
+                        </item>
+                    </argument>
+                    <settings>
+                        <validation>
+                            <rule name="validate-digits" xsi:type="boolean">true</rule>
+                        </validation>
+                        <dataType>number</dataType>
+                        <label translate="true">Sort Order</label>
+                    </settings>
+                </field>
+                <field name="status" formElement="checkbox">
+                    <argument name="data" xsi:type="array">
+                        <item name="config" xsi:type="array">
+                            <item name="default" xsi:type="number">1</item>
+                            <item name="tooltip" xsi:type="array">
+                                <item name="description" xsi:type="string" translate="true">Enable or disable this breakpoint</item>
+                            </item>
+                        </item>
+                    </argument>
+                    <settings>
+                        <dataType>boolean</dataType>
+                        <label translate="true">Enabled</label>
+                    </settings>
+                    <formElements>
+                        <checkbox>
+                            <settings>
+                                <valueMap>
+                                    <map name="false" xsi:type="number">0</map>
+                                    <map name="true" xsi:type="number">1</map>
+                                </valueMap>
+                            </settings>
+                        </checkbox>
+                    </formElements>
+                </field>
+                <actionDelete template="Magento_Backend/dynamic-rows/cells/action-delete">
+                    <argument name="data" xsi:type="array">
+                        <item name="config" xsi:type="array">
+                            <item name="fit" xsi:type="boolean">false</item>
+                        </item>
+                    </argument>
+                </actionDelete>
+            </container>
+        </container>
+    </fieldset>
+</form>
