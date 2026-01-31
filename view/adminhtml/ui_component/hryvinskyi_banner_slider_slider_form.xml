@@ -15,6 +15,7 @@
     <settings>
         <buttons>
             <button name="back" class="Hryvinskyi\BannerSliderAdminUi\Block\Adminhtml\Slider\Edit\BackButton"/>
+            <button name="manage_banners" class="Hryvinskyi\BannerSliderAdminUi\Block\Adminhtml\Slider\Edit\ManageBannersButton"/>
             <button name="delete" class="Hryvinskyi\BannerSliderAdminUi\Block\Adminhtml\Slider\Edit\DeleteButton"/>
             <button name="save" class="Hryvinskyi\BannerSliderAdminUi\Block\Adminhtml\Slider\Edit\SaveButton"/>
             <button name="save_and_continue" class="Hryvinskyi\BannerSliderAdminUi\Block\Adminhtml\Slider\Edit\SaveAndContinueButton"/>

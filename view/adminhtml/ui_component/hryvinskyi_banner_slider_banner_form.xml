@@ -83,6 +83,14 @@
             </formElements>
         </field>
         <field name="slider_id" formElement="select">
+            <argument name="data" xsi:type="array">
+                <item name="config" xsi:type="array">
+                    <item name="component" xsi:type="string">Hryvinskyi_BannerSliderAdminUi/js/form/element/slider-select</item>
+                    <item name="editSliderUrl" xsi:type="url" path="banner_slider/slider/edit">
+                        <param name="slider_id">__slider_id__</param>
+                    </item>
+                </item>
+            </argument>
             <settings>
                 <validation>
                     <rule name="required-entry" xsi:type="boolean">true</rule>

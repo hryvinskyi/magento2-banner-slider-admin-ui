@@ -1,8 +1,11 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!--
-  ~ Copyright (c) 2025. Volodymyr Hryvinskyi. All rights reserved.
-  ~ @author: <mailto:volodymyr@hryvinskyi.com>
-  -->
+/**
+ * Copyright (c) 2026. Volodymyr Hryvinskyi. All rights reserved.
+ * Author: Volodymyr Hryvinskyi <volodymyr@hryvinskyi.com>
+ * GitHub: https://github.com/hryvinskyi
+ */
+-->
 <listing xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
          xsi:noNamespaceSchemaLocation="urn:magento:module:Magento_Ui:etc/ui_configuration.xsd">
     <argument name="data" xsi:type="array">
@@ -31,7 +34,7 @@
             <updateUrl path="mui/index/render"/>
         </settings>
         <aclResource>Hryvinskyi_BannerSlider::slider</aclResource>
-        <dataProvider class="Magento\Framework\View\Element\UiComponent\DataProvider\DataProvider" name="hryvinskyi_banner_slider_slider_listing_data_source">
+        <dataProvider class="Hryvinskyi\BannerSliderAdminUi\Ui\Listing\DataProvider\Slider" name="hryvinskyi_banner_slider_slider_listing_data_source">
             <settings>
                 <requestFieldName>slider_id</requestFieldName>
                 <primaryFieldName>slider_id</primaryFieldName>
@@ -79,26 +82,80 @@
                 <indexField>slider_id</indexField>
             </settings>
         </selectionsColumn>
-        <column name="slider_id">
+        <column name="slider_id" sortOrder="10">
             <settings>
                 <filter>textRange</filter>
                 <label translate="true">ID</label>
                 <sorting>asc</sorting>
             </settings>
         </column>
-        <column name="name">
+        <column name="name" sortOrder="20">
             <settings>
                 <filter>text</filter>
                 <label translate="true">Name</label>
             </settings>
         </column>
-        <column name="location">
+        <column name="location" sortOrder="30">
             <settings>
                 <filter>text</filter>
                 <label translate="true">Location</label>
             </settings>
         </column>
-        <column name="status" component="Hryvinskyi_BannerSliderAdminUi/js/grid/columns/status">
+        <column name="store_ids" class="Magento\Store\Ui\Component\Listing\Column\Store" sortOrder="40">
+            <argument name="storeKey" xsi:type="string">store_ids</argument>
+            <settings>
+                <label translate="true">Store View</label>
+                <bodyTmpl>ui/grid/cells/html</bodyTmpl>
+                <sortable>false</sortable>
+            </settings>
+        </column>
+        <column name="customer_group_ids" class="Hryvinskyi\BannerSliderAdminUi\Ui\Listing\Column\CustomerGroup"
+                sortOrder="50">
+            <settings>
+                <label translate="true">Customer Group</label>
+                <bodyTmpl>ui/grid/cells/html</bodyTmpl>
+                <sortable>false</sortable>
+            </settings>
+        </column>
+        <column name="priority" sortOrder="60">
+            <settings>
+                <filter>textRange</filter>
+                <label translate="true">Priority</label>
+            </settings>
+        </column>
+        <column name="from_date" class="Magento\Ui\Component\Listing\Columns\Date"
+                component="Magento_Ui/js/grid/columns/date" sortOrder="70">
+            <settings>
+                <filter>dateRange</filter>
+                <dataType>date</dataType>
+                <label translate="true">From Date</label>
+            </settings>
+        </column>
+        <column name="to_date" class="Magento\Ui\Component\Listing\Columns\Date"
+                component="Magento_Ui/js/grid/columns/date" sortOrder="80">
+            <settings>
+                <filter>dateRange</filter>
+                <dataType>date</dataType>
+                <label translate="true">To Date</label>
+            </settings>
+        </column>
+        <column name="created_at" class="Magento\Ui\Component\Listing\Columns\Date"
+                component="Magento_Ui/js/grid/columns/date" sortOrder="90">
+            <settings>
+                <filter>dateRange</filter>
+                <dataType>date</dataType>
+                <label translate="true">Created</label>
+            </settings>
+        </column>
+        <column name="updated_at" class="Magento\Ui\Component\Listing\Columns\Date"
+                component="Magento_Ui/js/grid/columns/date" sortOrder="100">
+            <settings>
+                <filter>dateRange</filter>
+                <dataType>date</dataType>
+                <label translate="true">Modified</label>
+            </settings>
+        </column>
+        <column name="status" component="Hryvinskyi_BannerSliderAdminUi/js/grid/columns/status" sortOrder="110">
             <settings>
                 <options class="Hryvinskyi\BannerSliderAdminUi\Model\Source\Status"/>
                 <filter>select</filter>
@@ -106,41 +163,8 @@
                 <label translate="true">Status</label>
             </settings>
         </column>
-        <column name="priority">
-            <settings>
-                <filter>textRange</filter>
-                <label translate="true">Priority</label>
-            </settings>
-        </column>
-        <column name="from_date" class="Magento\Ui\Component\Listing\Columns\Date" component="Magento_Ui/js/grid/columns/date">
-            <settings>
-                <filter>dateRange</filter>
-                <dataType>date</dataType>
-                <label translate="true">From Date</label>
-            </settings>
-        </column>
-        <column name="to_date" class="Magento\Ui\Component\Listing\Columns\Date" component="Magento_Ui/js/grid/columns/date">
-            <settings>
-                <filter>dateRange</filter>
-                <dataType>date</dataType>
-                <label translate="true">To Date</label>
-            </settings>
-        </column>
-        <column name="created_at" class="Magento\Ui\Component\Listing\Columns\Date" component="Magento_Ui/js/grid/columns/date">
-            <settings>
-                <filter>dateRange</filter>
-                <dataType>date</dataType>
-                <label translate="true">Created</label>
-            </settings>
-        </column>
-        <column name="updated_at" class="Magento\Ui\Component\Listing\Columns\Date" component="Magento_Ui/js/grid/columns/date">
-            <settings>
-                <filter>dateRange</filter>
-                <dataType>date</dataType>
-                <label translate="true">Modified</label>
-            </settings>
-        </column>
-        <actionsColumn name="actions" class="Hryvinskyi\BannerSliderAdminUi\Ui\Listing\Column\SliderActions">
+        <actionsColumn name="actions"
+                       class="Hryvinskyi\BannerSliderAdminUi\Ui\Listing\Column\SliderActions" sortOrder="120">
             <settings>
                 <indexField>slider_id</indexField>
             </settings>

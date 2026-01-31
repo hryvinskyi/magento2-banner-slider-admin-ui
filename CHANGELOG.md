@@ -5,6 +5,30 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.0.2] - 2026-01-31
+
+### Added
+- Listing data providers with modifier support:
+  - `Ui/Listing/DataProvider/Slider` - Slider grid data provider
+  - `Ui/Listing/DataProvider/Banner` - Banner grid data provider
+- Form data modifiers for slider:
+  - `PrepareBreakpoints` - Loads breakpoints data for slider form
+  - `PrepareCustomerGroups` - Converts customer group IDs from string to array
+  - `PrepareStores` - Converts store IDs from string to array
+- Navigation buttons:
+  - "Manage Banners" button on banner form (links to banner listing filtered by slider)
+  - "Back to Slider" button on banner listing (visible when filtered by slider_id)
+  - "Edit Slider" button next to slider dropdown on banner form (opens slider edit in new tab)
+- Custom slider select component:
+  - `slider-select.js` - Extended select with edit button
+  - `slider-select.html` - Template with inline edit button
+
+### Changed
+- Refactored `Slider/FormDataProvider` to use `PrepareDataProcessorInterface`
+- Removed `BreakpointRepositoryInterface` direct dependency from `Slider/FormDataProvider`
+- Updated `GenericButton` to include `getSliderId()` method
+- Configured DI for slider and banner listing data processors
+
 ## [1.0.1] - 2026-01-31
 
 ### Added

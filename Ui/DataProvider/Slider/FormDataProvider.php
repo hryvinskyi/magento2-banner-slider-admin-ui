@@ -10,7 +10,7 @@ declare(strict_types=1);
 namespace Hryvinskyi\BannerSliderAdminUi\Ui\DataProvider\Slider;
 
 use Hryvinskyi\BannerSlider\Model\ResourceModel\Slider\CollectionFactory;
-use Hryvinskyi\BannerSliderApi\Api\BreakpointRepositoryInterface;
+use Hryvinskyi\BannerSliderAdminUi\Api\DataProvider\PrepareDataProcessorInterface;
 use Hryvinskyi\BannerSliderApi\Api\Data\SliderInterface;
 use Magento\Framework\App\Request\DataPersistorInterface;
 use Magento\Ui\DataProvider\AbstractDataProvider;
@@ -31,7 +31,7 @@ class FormDataProvider extends AbstractDataProvider
      * @param string $requestFieldName
      * @param CollectionFactory $collectionFactory
      * @param DataPersistorInterface $dataPersistor
-     * @param BreakpointRepositoryInterface $breakpointRepository
+     * @param PrepareDataProcessorInterface $prepareDataProcessor
      * @param array $meta
      * @param array $data
      */
@@ -41,7 +41,7 @@ class FormDataProvider extends AbstractDataProvider
         string $requestFieldName,
         CollectionFactory $collectionFactory,
         private readonly DataPersistorInterface $dataPersistor,
-        private readonly BreakpointRepositoryInterface $breakpointRepository,
+        private readonly PrepareDataProcessorInterface $prepareDataProcessor,
         array $meta = [],
         array $data = []
     ) {
@@ -64,7 +64,7 @@ class FormDataProvider extends AbstractDataProvider
         /** @var SliderInterface $slider */
         foreach ($items as $slider) {
             $sliderData = $slider->getData();
-            $sliderData['breakpoints']['breakpoints_container'] = $this->getBreakpointsData((int)$slider->getSliderId());
+            $this->prepareDataProcessor->execute($sliderData);
             $this->loadedData[$slider->getSliderId()] = $sliderData;
         }
 
@@ -77,23 +77,5 @@ class FormDataProvider extends AbstractDataProvider
         }
 
         return $this->loadedData;
-    }
-
-    /**
-     * Get breakpoints data for slider
-     *
-     * @param int $sliderId
-     * @return array<int, array<string, mixed>>
-     */
-    private function getBreakpointsData(int $sliderId): array
-    {
-        $breakpoints = $this->breakpointRepository->getBySliderId($sliderId);
-        $result = [];
-
-        foreach ($breakpoints as $breakpoint) {
-            $result[] = $breakpoint->getData();
-        }
-
-        return $result;
     }
 }

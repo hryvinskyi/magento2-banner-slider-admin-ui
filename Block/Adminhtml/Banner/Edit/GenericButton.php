@@ -36,6 +36,17 @@ class GenericButton
     }
 
     /**
+     * Get slider ID from request
+     *
+     * @return int|null
+     */
+    public function getSliderId(): ?int
+    {
+        $sliderId = $this->context->getRequest()->getParam('slider_id');
+        return $sliderId ? (int)$sliderId : null;
+    }
+
+    /**
      * Generate URL by route and parameters
      *
      * @param string $route

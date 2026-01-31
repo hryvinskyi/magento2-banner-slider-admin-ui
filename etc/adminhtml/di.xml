@@ -105,6 +105,21 @@
         </arguments>
     </type>
 
+    <!-- Banner Listing Data Provider PrepareDataProcessor Configuration -->
+    <virtualType name="Hryvinskyi\BannerSliderAdminUi\Model\DataProvider\Banner\PrepareListingDataProcessor"
+                 type="Hryvinskyi\BannerSliderAdminUi\Model\DataProvider\PrepareDataProcessor">
+        <arguments>
+            <argument name="items" xsi:type="array">
+            </argument>
+        </arguments>
+    </virtualType>
+
+    <type name="Hryvinskyi\BannerSliderAdminUi\Ui\Listing\DataProvider\Banner">
+        <arguments>
+            <argument name="prepareDataProcessor" xsi:type="object">Hryvinskyi\BannerSliderAdminUi\Model\DataProvider\Banner\PrepareListingDataProcessor</argument>
+        </arguments>
+    </type>
+
     <!-- Slider PrepareDataProcessor Configuration -->
     <virtualType name="Hryvinskyi\BannerSliderAdminUi\Model\DataProvider\Slider\PrepareDataBeforeSaveProcessor"
                  type="Hryvinskyi\BannerSliderAdminUi\Model\DataProvider\PrepareDataProcessor">
@@ -117,6 +132,56 @@
     <type name="Hryvinskyi\BannerSliderAdminUi\Controller\Adminhtml\Slider\Save">
         <arguments>
             <argument name="prepareDataProcessor" xsi:type="object">Hryvinskyi\BannerSliderAdminUi\Model\DataProvider\Slider\PrepareDataBeforeSaveProcessor</argument>
+        </arguments>
+    </type>
+
+    <!-- Slider Form Data Provider PrepareDataProcessor Configuration -->
+    <virtualType name="Hryvinskyi\BannerSliderAdminUi\Model\DataProvider\Slider\PrepareDataAfterLoadProcessor"
+                 type="Hryvinskyi\BannerSliderAdminUi\Model\DataProvider\PrepareDataProcessor">
+        <arguments>
+            <argument name="items" xsi:type="array">
+                <item name="customer_groups" xsi:type="array">
+                    <item name="object" xsi:type="object">Hryvinskyi\BannerSliderAdminUi\Ui\DataProvider\Slider\Modifier\PrepareCustomerGroups</item>
+                    <item name="sortOrder" xsi:type="string">10</item>
+                </item>
+                <item name="stores" xsi:type="array">
+                    <item name="object" xsi:type="object">Hryvinskyi\BannerSliderAdminUi\Ui\DataProvider\Slider\Modifier\PrepareStores</item>
+                    <item name="sortOrder" xsi:type="string">20</item>
+                </item>
+                <item name="breakpoints" xsi:type="array">
+                    <item name="object" xsi:type="object">Hryvinskyi\BannerSliderAdminUi\Ui\DataProvider\Slider\Modifier\PrepareBreakpoints</item>
+                    <item name="sortOrder" xsi:type="string">30</item>
+                </item>
+            </argument>
+        </arguments>
+    </virtualType>
+
+    <type name="Hryvinskyi\BannerSliderAdminUi\Ui\DataProvider\Slider\FormDataProvider">
+        <arguments>
+            <argument name="prepareDataProcessor" xsi:type="object">Hryvinskyi\BannerSliderAdminUi\Model\DataProvider\Slider\PrepareDataAfterLoadProcessor</argument>
+        </arguments>
+    </type>
+
+    <!-- Slider Listing Data Provider PrepareDataProcessor Configuration -->
+    <virtualType name="Hryvinskyi\BannerSliderAdminUi\Model\DataProvider\Slider\PrepareListingDataProcessor"
+                 type="Hryvinskyi\BannerSliderAdminUi\Model\DataProvider\PrepareDataProcessor">
+        <arguments>
+            <argument name="items" xsi:type="array">
+                <item name="customer_groups" xsi:type="array">
+                    <item name="object" xsi:type="object">Hryvinskyi\BannerSliderAdminUi\Ui\DataProvider\Slider\Modifier\PrepareCustomerGroups</item>
+                    <item name="sortOrder" xsi:type="string">10</item>
+                </item>
+                <item name="stores" xsi:type="array">
+                    <item name="object" xsi:type="object">Hryvinskyi\BannerSliderAdminUi\Ui\DataProvider\Slider\Modifier\PrepareStores</item>
+                    <item name="sortOrder" xsi:type="string">20</item>
+                </item>
+            </argument>
+        </arguments>
+    </virtualType>
+
+    <type name="Hryvinskyi\BannerSliderAdminUi\Ui\Listing\DataProvider\Slider">
+        <arguments>
+            <argument name="prepareDataProcessor" xsi:type="object">Hryvinskyi\BannerSliderAdminUi\Model\DataProvider\Slider\PrepareListingDataProcessor</argument>
         </arguments>
     </type>
 

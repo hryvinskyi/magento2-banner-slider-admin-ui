@@ -1,0 +1,39 @@
+<!--
+/**
+ * Copyright (c) 2026. Volodymyr Hryvinskyi. All rights reserved.
+ * Author: Volodymyr Hryvinskyi <volodymyr@hryvinskyi.com>
+ * GitHub: https://github.com/hryvinskyi
+ */
+-->
+<div class="admin__field-control" css="$data.additionalClasses">
+    <div style="display: flex; align-items: center; gap: 10px;">
+        <select class="admin__control-select"
+                attr="name: inputName, id: uid, disabled: disabled, 'aria-describedby': noticeId"
+                ko-disabled="disabled"
+                ko-value="value"
+                event="change: userChanges"
+                hasFocus="focused">
+            <each args="data: options, as: 'option'">
+                <if args="Array.isArray(option.value)">
+                    <optgroup attr="label: option.label" foreach="element: option.value, as: 'subOption'">
+                        <option attr="value: subOption.value" text="subOption.label"/>
+                    </optgroup>
+                </if>
+                <ifnot args="Array.isArray(option.value)">
+                    <option attr="value: option.value" text="option.label"/>
+                </ifnot>
+            </each>
+        </select>
+        <button type="button"
+                class="action-secondary"
+                click="editSlider"
+                attr="title: $t('Edit Slider')"
+                visible="value()"
+                style="white-space: nowrap;">
+            <span text="$t('Edit Slider')"/>
+        </button>
+    </div>
+    <each args="data: error, as: 'errorMsg'">
+        <label class="admin__field-error" attr="for: uid" text="errorMsg"></label>
+    </each>
+</div>
