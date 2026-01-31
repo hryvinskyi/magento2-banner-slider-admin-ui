@@ -16,6 +16,11 @@ use Magento\Framework\Data\OptionSourceInterface;
  */
 class AspectRatio implements OptionSourceInterface
 {
+    public const string CUSTOM = 'custom';
+
+    /** @var array<int, string> */
+    public const array PREDEFINED_RATIOS = ['16:9', '4:3', '21:9', '1:1', '9:16'];
+
     /**
      * @inheritDoc
      */
@@ -27,6 +32,7 @@ class AspectRatio implements OptionSourceInterface
             ['value' => '21:9', 'label' => __('21:9 (Ultrawide)')],
             ['value' => '1:1', 'label' => __('1:1 (Square)')],
             ['value' => '9:16', 'label' => __('9:16 (Vertical)')],
+            ['value' => self::CUSTOM, 'label' => __('Custom Aspect Ratio')],
         ];
     }
 }

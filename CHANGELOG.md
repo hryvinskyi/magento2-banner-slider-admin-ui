@@ -5,6 +5,21 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.0.1] - 2026-01-31
+
+### Added
+- Custom Aspect Ratio option for video banners
+  - New "Custom Aspect Ratio" option in Aspect Ratio dropdown
+  - Input field for custom ratio values (e.g., 3:2, 16:10, 2.35:1)
+  - Client-side validation for aspect ratio format
+  - `PrepareCustomAspectRatio` data processor for form loading
+  - `SaveCustomAspectRatio` data processor for saving custom values
+  - `aspect-ratio-input.js` UI component with validation
+
+### Changed
+- `AspectRatio` source model now includes `CUSTOM` and `PREDEFINED_RATIOS` constants
+- `video-uploader.js` now validates aspect ratio format and falls back to 16:9 for invalid values
+
 ## [1.0.0] - 2026-01-31
 
 ### Added

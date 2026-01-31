@@ -48,6 +48,10 @@
                  type="Hryvinskyi\BannerSliderAdminUi\Model\DataProvider\PrepareDataProcessor">
         <arguments>
             <argument name="items" xsi:type="array">
+                <item name="custom_aspect_ratio" xsi:type="array">
+                    <item name="object" xsi:type="object">Hryvinskyi\BannerSliderAdminUi\Model\DataProvider\Banner\SaveCustomAspectRatio</item>
+                    <item name="sortOrder" xsi:type="string">10</item>
+                </item>
                 <item name="image" xsi:type="array">
                     <item name="object" xsi:type="object">Hryvinskyi\BannerSliderAdminUi\Model\DataProvider\Banner\PrepareImageToString</item>
                     <item name="sortOrder" xsi:type="string">20</item>
@@ -86,6 +90,10 @@
                 <item name="video_path" xsi:type="array">
                     <item name="object" xsi:type="object">Hryvinskyi\BannerSliderAdminUi\Model\DataProvider\Banner\PrepareVideoToArray</item>
                     <item name="sortOrder" xsi:type="string">20</item>
+                </item>
+                <item name="custom_aspect_ratio" xsi:type="array">
+                    <item name="object" xsi:type="object">Hryvinskyi\BannerSliderAdminUi\Model\DataProvider\Banner\PrepareCustomAspectRatio</item>
+                    <item name="sortOrder" xsi:type="string">30</item>
                 </item>
             </argument>
         </arguments>

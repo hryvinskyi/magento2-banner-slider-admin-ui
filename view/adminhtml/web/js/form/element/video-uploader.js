@@ -95,8 +95,34 @@ define([
         onAspectRatioChange: function (value) {
             if (value) {
                 this.aspectRatio(value);
-                this.aspectRatioStyle(this.getAspectRatioStyle());
+
+                if (typeof this.aspectRatioStyle === 'function') {
+                    this.aspectRatioStyle(this.getAspectRatioStyle());
+                }
             }
+        },
+
+        /**
+         * Validate if aspect ratio format is valid
+         *
+         * @param {String} ratio
+         * @returns {Boolean}
+         */
+        isValidAspectRatio: function (ratio) {
+            if (!ratio || typeof ratio !== 'string') {
+                return false;
+            }
+
+            var parts = ratio.split(':');
+
+            if (parts.length !== 2) {
+                return false;
+            }
+
+            var width = parseFloat(parts[0]);
+            var height = parseFloat(parts[1]);
+
+            return !isNaN(width) && !isNaN(height) && width > 0 && height > 0;
         },
 
         /**
@@ -106,9 +132,15 @@ define([
          */
         getAspectRatioStyle: function () {
             var ratio = this.aspectRatio() || this.aspectRatio || '16:9';
+
             if (typeof ratio === 'function') {
                 ratio = ratio();
             }
+
+            if (!this.isValidAspectRatio(ratio)) {
+                ratio = '16:9';
+            }
+
             return ratio.replace(':', ' / ');
         },
 
