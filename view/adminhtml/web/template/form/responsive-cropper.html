@@ -139,8 +139,10 @@
                     <label data-bind="i18n: 'WebP Quality:'"></label>
                     <input type="range" min="1" max="100"
                            data-bind="value: $parent.getCropData(breakpoint_id).webp_quality || 85,
-                                      event: { change: function(data, event) { $parent.updateWebpQuality($data, data, event); } }"/>
-                    <span data-bind="text: $parent.getCropData(breakpoint_id).webp_quality || 85"></span>
+                                      event: { input: function(data, event) { $parent.updateWebpQuality($data, data, event); } }"/>
+                    <input type="number" min="1" max="100" class="quality-input"
+                           data-bind="value: $parent.getCropData(breakpoint_id).webp_quality || 85,
+                                      event: { input: function(data, event) { $parent.updateWebpQuality($data, data, event); } }"/>
                     <!-- ko if: $parent.previewUrls() && $parent.previewUrls().webp -->
                     <span class="preview-size" data-bind="text: '(' + $parent.previewUrls().webp.formattedSize + ')'"></span>
                     <!-- /ko -->
@@ -158,8 +160,10 @@
                     <label data-bind="i18n: 'AVIF Quality:'"></label>
                     <input type="range" min="1" max="100"
                            data-bind="value: $parent.getCropData(breakpoint_id).avif_quality || 80,
-                                      event: { change: function(data, event) { $parent.updateAvifQuality($data, data, event); } }"/>
-                    <span data-bind="text: $parent.getCropData(breakpoint_id).avif_quality || 80"></span>
+                                      event: { input: function(data, event) { $parent.updateAvifQuality($data, data, event); } }"/>
+                    <input type="number" min="1" max="100" class="quality-input"
+                           data-bind="value: $parent.getCropData(breakpoint_id).avif_quality || 80,
+                                      event: { input: function(data, event) { $parent.updateAvifQuality($data, data, event); } }"/>
                     <!-- ko if: $parent.previewUrls() && $parent.previewUrls().avif -->
                     <span class="preview-size" data-bind="text: '(' + $parent.previewUrls().avif.formattedSize + ')'"></span>
                     <!-- /ko -->
@@ -251,21 +255,15 @@
                 <span data-bind="i18n: 'Auto-saved'"></span>
             </span>
             <button type="button" class="action-primary"
-                    data-bind="click: function() { $parent.generateImages($data); },
-                               visible: $parent.getCropData(breakpoint_id).crop_id,
-                               i18n: 'Generate Images'"></button>
+                    data-bind="click: function() { $parent.generatePreviewImages($data); },
+                               visible: $parent.showComparison() && $parent.getCropData(breakpoint_id).crop_id,
+                               i18n: 'Generate Preview'"></button>
         </div>
     </div>
 
     <!-- No breakpoint selected message -->
     <div class="no-breakpoint-message" data-bind="visible: !activeBreakpoint()">
         <p data-bind="i18n: 'Select a breakpoint tab above to configure responsive images.'"></p>
-    </div>
-
-    <!-- Generate All Button -->
-    <div class="generate-all-section" data-bind="visible: bannerId()">
-        <button type="button" class="action-primary"
-                data-bind="click: generateAllImages, i18n: 'Save & Generate All Images'"></button>
     </div>
 </div>
 

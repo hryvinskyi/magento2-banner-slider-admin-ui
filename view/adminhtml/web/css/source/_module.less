@@ -506,18 +506,34 @@
                     height: 4px;
                 }
 
-                span {
-                    min-width: 28px;
-                    text-align: right;
+                input.quality-input {
+                    width: 60px;
+                    padding: 4px 8px;
+                    border: 1px solid @color-gray-light;
+                    border-radius: 3px;
+                    font-size: 13px;
                     font-weight: 600;
                     color: @color-gray-dark;
-                    font-size: 13px;
+                    text-align: center;
+                    transition: border-color 0.15s;
+
+                    &:focus {
+                        outline: none;
+                        border-color: @color-blue;
+                    }
+
+                    &::-webkit-outer-spin-button,
+                    &::-webkit-inner-spin-button {
+                        -webkit-appearance: none;
+                        margin: 0;
+                    }
+
+                    -moz-appearance: textfield;
                 }
 
                 .preview-size {
                     color: @color-blue;
                     font-size: 12px;
-                    min-width: auto;
                     font-weight: 500;
                 }
             }

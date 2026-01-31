@@ -361,7 +361,7 @@ define([
                     self.updateCropDataAfterSave(cropData, response, sourceImage);
                     cropData.webp_quality = data.webp_quality;
                     cropData.avif_quality = data.avif_quality;
-                    self.setCropData(breakpoint.breakpoint_id, cropData);
+                    self.setCropData(breakpoint.breakpoint_id, cropData, true);
                 })
                 .catch(function (error) {
                     self.isSaving(false);
@@ -401,7 +401,7 @@ define([
                         self.updateCropDataAfterSave(cropData, response, sourceImage);
                         cropData.webp_quality = data.webp_quality;
                         cropData.avif_quality = data.avif_quality;
-                        self.setCropData(breakpoint.breakpoint_id, cropData);
+                        self.setCropData(breakpoint.breakpoint_id, cropData, true);
                     });
 
                 savePromises.push(promise);
@@ -450,6 +450,99 @@ define([
             } else {
                 this.generateImagesOnServer(breakpoint);
             }
+        },
+
+        /**
+         * Generate preview images for comparison (browser-only, no server upload)
+         *
+         * @param {Object} breakpoint
+         */
+        generatePreviewImages: function (breakpoint) {
+            var self = this;
+            var cropData = this.getCropData(breakpoint.breakpoint_id);
+
+            if (!this.cropperManager.isInitialized()) {
+                ajaxService.showWarning($t('Cropper is not initialized.'));
+                return;
+            }
+
+            self.isCompressing(true);
+            self.compressionProgress(0);
+            self.compressionMessage($t('Generating preview...'));
+
+            var targetWidth = breakpoint.target_width;
+            var cropWidth = cropData.crop_width || 0;
+            var cropHeight = cropData.crop_height || 0;
+
+            var targetHeight = (cropWidth > 0 && cropHeight > 0)
+                ? Math.round(targetWidth * cropHeight / cropWidth)
+                : breakpoint.target_height;
+
+            var canvas = this.cropperManager.getCroppedCanvas(targetWidth, targetHeight);
+
+            if (!canvas) {
+                self.isCompressing(false);
+                ajaxService.showError($t('Failed to get cropped canvas.'));
+                return;
+            }
+
+            var options = {
+                webpQuality: cropData.webp_quality || config.WEBP_QUALITY_DEFAULT,
+                avifQuality: cropData.avif_quality || config.AVIF_QUALITY_DEFAULT,
+                generateWebp: this.isWebpEnabled(cropData),
+                generateAvif: this.isAvifEnabled(cropData),
+                originalMimeType: 'image/jpeg'
+            };
+
+            imageCompressor.compressAllFormats(canvas, options, function (progress, message) {
+                self.compressionProgress(progress);
+                self.compressionMessage(message);
+            })
+                .then(function (results) {
+                    self.isCompressing(false);
+                    self.compressionProgress(100);
+
+                    // Revoke old preview URLs
+                    if (cropData.preview_cropped_url) {
+                        URL.revokeObjectURL(cropData.preview_cropped_url);
+                    }
+                    if (cropData.preview_webp_url) {
+                        URL.revokeObjectURL(cropData.preview_webp_url);
+                    }
+                    if (cropData.preview_avif_url) {
+                        URL.revokeObjectURL(cropData.preview_avif_url);
+                    }
+
+                    // Create new preview blob URLs
+                    var updated = Object.assign({}, cropData);
+
+                    if (results.original && results.original.blob) {
+                        updated.cropped_image_url = URL.createObjectURL(results.original.blob);
+                        updated.original_size = results.original.size;
+                        updated.preview_cropped_url = updated.cropped_image_url;
+                    }
+
+                    if (results.webp && results.webp.blob) {
+                        updated.webp_image_url = URL.createObjectURL(results.webp.blob);
+                        updated.webp_size = results.webp.size;
+                        updated.preview_webp_url = updated.webp_image_url;
+                    }
+
+                    if (results.avif && results.avif.blob) {
+                        updated.avif_image_url = URL.createObjectURL(results.avif.blob);
+                        updated.avif_size = results.avif.size;
+                        updated.preview_avif_url = updated.avif_image_url;
+                    }
+
+                    self.setCropData(breakpoint.breakpoint_id, updated);
+                    self.showComparison(true);
+
+                    ajaxService.showSuccess($t('Preview generated.'));
+                })
+                .catch(function (error) {
+                    self.isCompressing(false);
+                    ajaxService.showError(error.message || $t('Failed to generate preview.'));
+                });
         },
 
         /**
@@ -542,33 +635,6 @@ define([
                 .catch(function (error) {
                     self.isLoading(false);
                     ajaxService.showError(error.message);
-                });
-        },
-
-        /**
-         * Generate images for all breakpoints
-         */
-        generateAllImages: function () {
-            var self = this;
-
-            if (!this.bannerId()) {
-                ajaxService.showWarning($t('Please save the banner first.'));
-                return;
-            }
-
-            self.isLoading(true);
-
-            this.saveAllBreakpoints()
-                .then(function () {
-                    return self.generateAllBreakpointImages();
-                })
-                .then(function () {
-                    self.isLoading(false);
-                    ajaxService.showSuccess($t('Images generated successfully.'));
-                })
-                .catch(function (error) {
-                    self.isLoading(false);
-                    ajaxService.showError(error.message || $t('An error occurred.'));
                 });
         },
 
@@ -810,6 +876,9 @@ define([
          * @param {Number} breakpointId
          */
         clearBreakpointImage: function (breakpointId) {
+            // Destroy cropper first to prevent visual flash
+            this.destroyCropper();
+
             var images = this.breakpointImages();
             delete images[breakpointId];
             this.breakpointImages(Object.assign({}, images));
@@ -817,13 +886,13 @@ define([
             var cropData = this.getCropData(breakpointId);
             cropData.custom_source_image = null;
             cropData.custom_source_image_url = null;
+            cropData.source_image_url = null;
+            cropData.source_image = null;
             cropData.crop_x = 0;
             cropData.crop_y = 0;
             cropData.crop_width = 0;
             cropData.crop_height = 0;
             this.setCropData(breakpointId, cropData);
-
-            this.destroyCropper();
 
             var breakpoint = this.activeBreakpoint();
             if (breakpoint && breakpoint.breakpoint_id === breakpointId) {
@@ -1057,7 +1126,7 @@ define([
         toggleWebP: function (breakpoint) {
             var cropData = this.getCropData(breakpoint.breakpoint_id);
             cropData.generate_webp = cropData.generate_webp === false;
-            this.setCropData(breakpoint.breakpoint_id, cropData);
+            this.setCropData(breakpoint.breakpoint_id, cropData, true);
             this.autoSave();
         },
 
@@ -1069,7 +1138,7 @@ define([
         toggleAvif: function (breakpoint) {
             var cropData = this.getCropData(breakpoint.breakpoint_id);
             cropData.generate_avif = cropData.generate_avif !== true;
-            this.setCropData(breakpoint.breakpoint_id, cropData);
+            this.setCropData(breakpoint.breakpoint_id, cropData, true);
             this.autoSave();
         },
 
@@ -1081,9 +1150,11 @@ define([
          * @param {Object} event
          */
         updateWebpQuality: function (breakpoint, data, event) {
+            var value = parseInt(event.target.value, 10) || config.WEBP_QUALITY_DEFAULT;
             var cropData = this.getCropData(breakpoint.breakpoint_id);
-            cropData.webp_quality = parseInt(event.target.value, 10) || config.WEBP_QUALITY_DEFAULT;
-            this.setCropData(breakpoint.breakpoint_id, cropData);
+            cropData.webp_quality = value;
+            this.setCropData(breakpoint.breakpoint_id, cropData, true);
+            this.syncQualityInputs(event.target, value);
             this.autoSave();
         },
 
@@ -1095,10 +1166,36 @@ define([
          * @param {Object} event
          */
         updateAvifQuality: function (breakpoint, data, event) {
+            var value = parseInt(event.target.value, 10) || config.AVIF_QUALITY_DEFAULT;
             var cropData = this.getCropData(breakpoint.breakpoint_id);
-            cropData.avif_quality = parseInt(event.target.value, 10) || config.AVIF_QUALITY_DEFAULT;
-            this.setCropData(breakpoint.breakpoint_id, cropData);
+            cropData.avif_quality = value;
+            this.setCropData(breakpoint.breakpoint_id, cropData, true);
+            this.syncQualityInputs(event.target, value);
             this.autoSave();
+        },
+
+        /**
+         * Sync quality slider and number input values
+         *
+         * @param {HTMLElement} sourceElement
+         * @param {Number} value
+         */
+        syncQualityInputs: function (sourceElement, value) {
+            var container = sourceElement.closest('.quality-slider');
+            if (!container) {
+                return;
+            }
+
+            var rangeInput = container.querySelector('input[type="range"]');
+            var numberInput = container.querySelector('input[type="number"]');
+
+            if (rangeInput && rangeInput !== sourceElement) {
+                rangeInput.value = value;
+            }
+
+            if (numberInput && numberInput !== sourceElement) {
+                numberInput.value = value;
+            }
         },
 
         // ==================== COMPARISON & PREVIEW METHODS ====================

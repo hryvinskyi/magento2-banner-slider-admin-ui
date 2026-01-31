@@ -5,6 +5,33 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.0.3] - 2026-02-01
+
+### Added
+- Number input field alongside quality sliders for WebP and AVIF
+  - Allows direct value entry in addition to slider control
+  - Real-time synchronization between slider and input
+- `generatePreviewImages()` function for browser-only preview generation
+- `syncQualityInputs()` helper for slider/input synchronization
+
+### Changed
+- "Generate Images" button renamed to "Generate Preview"
+  - Now only visible when "Show Quality Comparison" is enabled
+  - Generates preview images in browser only (no server upload)
+  - Uses blob URLs for temporary preview display
+- Quality slider updates no longer trigger cropper reinitialization
+
+### Fixed
+- "Use Desktop Image" button now correctly loads desktop image
+  - Clears `source_image_url` and `source_image` when reverting to desktop
+- Cropper blinking issues on various user actions:
+  - Moving `destroyCropper()` call before observable updates
+  - Using `silent: true` in save callbacks to prevent unnecessary re-renders
+  - Quality changes no longer cause cropper to reinitialize
+
+### Removed
+- "Save & Generate All Images" button from responsive cropper UI
+
 ## [1.0.2] - 2026-01-31
 
 ### Added
