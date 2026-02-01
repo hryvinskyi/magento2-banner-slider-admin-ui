@@ -393,18 +393,27 @@
             }
         }
 
-        .cropper-container {
+        .cropper-wrapper {
             background: #303030;
             border: 1px solid @color-gray-light;
             border-radius: 3px;
             overflow: hidden;
 
-            img {
+            > img {
                 display: block;
                 max-width: 1000px;
                 max-height: 600px;
                 width: auto;
                 height: auto;
+            }
+
+            // Override global max-width: 100% rule for Cropper.js elements
+            .cropper-container {
+                max-width: none;
+
+                img {
+                    max-width: none;
+                }
             }
         }
     }

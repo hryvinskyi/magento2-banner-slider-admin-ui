@@ -17,10 +17,10 @@ define([], function () {
         ALLOWED_IMAGE_TYPES: ['image/jpeg', 'image/png', 'image/gif', 'image/webp'],
 
         // Cropper settings
-        CROPPER_MAX_WIDTH: 1000,
-        CROPPER_MAX_HEIGHT: 600,
+        CROPPER_MAX_WIDTH: 1920,
+        CROPPER_MAX_HEIGHT: 800,
 
         // Timing
-        AUTO_SAVE_DELAY: 800,
+        AUTO_SAVE_DELAY: 1000,
     };
 });

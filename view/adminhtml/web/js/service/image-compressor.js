@@ -411,6 +411,29 @@ define([
             var savings = ((originalSize - compressedSize) / originalSize) * 100;
 
             return savings.toFixed(1) + '%';
+        },
+
+        /**
+         * Convert blob to base64 string
+         *
+         * @param {Blob} blob
+         * @returns {Promise<String>}
+         */
+        blobToBase64: function (blob) {
+            return new Promise(function (resolve, reject) {
+                var reader = new FileReader();
+
+                reader.onloadend = function () {
+                    var base64 = reader.result.split(',')[1];
+                    resolve(base64);
+                };
+
+                reader.onerror = function () {
+                    reject(new Error($t('Failed to convert image to base64')));
+                };
+
+                reader.readAsDataURL(blob);
+            });
         }
     };
 });

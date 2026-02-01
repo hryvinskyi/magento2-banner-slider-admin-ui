@@ -12,6 +12,7 @@ namespace Hryvinskyi\BannerSliderAdminUi\Controller\Adminhtml\Banner;
 use Hryvinskyi\BannerSlider\Model\BannerFactory;
 use Hryvinskyi\BannerSliderAdminUi\Api\DataProvider\PrepareDataProcessorInterface;
 use Hryvinskyi\BannerSliderApi\Api\BannerRepositoryInterface;
+use Hryvinskyi\BannerSliderApi\Api\Data\BannerExtensionFactory;
 use Hryvinskyi\BannerSliderApi\Api\Data\BannerInterface;
 use Magento\Backend\App\Action;
 use Magento\Backend\App\Action\Context;
@@ -31,12 +32,14 @@ class Save extends Action implements HttpPostActionInterface
      * @param BannerRepositoryInterface $bannerRepository
      * @param BannerFactory $bannerFactory
      * @param PrepareDataProcessorInterface $prepareDataProcessor
+     * @param BannerExtensionFactory $extensionFactory
      */
     public function __construct(
         Context $context,
         private readonly BannerRepositoryInterface $bannerRepository,
         private readonly BannerFactory $bannerFactory,
-        private readonly PrepareDataProcessorInterface $prepareDataProcessor
+        private readonly PrepareDataProcessorInterface $prepareDataProcessor,
+        private readonly BannerExtensionFactory $extensionFactory
     ) {
         parent::__construct($context);
     }
@@ -66,6 +69,7 @@ class Save extends Action implements HttpPostActionInterface
 
             $data['object_entity'] = $banner;
             $this->prepareDataProcessor->execute($data);
+            $this->setExtensionAttributes($banner, $data);
             $this->bannerRepository->save($banner);
 
             $this->messageManager->addSuccessMessage(__('Banner has been saved.'));
@@ -82,5 +86,29 @@ class Save extends Action implements HttpPostActionInterface
         }
 
         return $resultRedirect->setPath('*/*/edit', ['banner_id' => $bannerId]);
+    }
+
+    /**
+     * Set extension attributes on banner from request data
+     *
+     * @param BannerInterface $banner
+     * @param array<string, mixed> $data
+     * @return void
+     */
+    private function setExtensionAttributes(BannerInterface $banner, array $data): void
+    {
+        $extensionAttributes = $banner->getExtensionAttributes();
+
+        if ($extensionAttributes === null) {
+            $extensionAttributes = $this->extensionFactory->create();
+        }
+
+        $cropsData = $data['responsive_crops_data'] ?? null;
+
+        if (!empty($cropsData) && is_array($cropsData)) {
+            $extensionAttributes->setResponsiveCropsData($cropsData);
+        }
+
+        $banner->setExtensionAttributes($extensionAttributes);
     }
 }

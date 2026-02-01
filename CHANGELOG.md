@@ -38,6 +38,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Quality changes no longer cause cropper to reinitialize
   - Toggling "Show Quality Comparison" no longer causes cropper blink
   - Added cropper state tracking to skip redundant reinitialization
+- Crop box going outside image boundary on right side
+  - Renamed custom `.cropper-container` wrapper to `.cropper-wrapper` to avoid CSS conflict with Cropper.js
+  - Added validation to clamp restored crop data within image bounds
+  - Ensures crop box position and size never exceed image dimensions
+- Crop position not saving correctly when using Desktop Image
+  - `onCropEnd` callback now captures crop data at the moment user releases mouse
+  - Prevents cropper snap-back from overwriting user's intended position
 
 ### Removed
 - "Save & Generate All Images" button from responsive cropper UI

@@ -18,6 +18,7 @@ define([
      */
     return function (callbacks) {
         var cropper = null;
+        var lastCropData = null;
 
         return {
             /**
@@ -54,8 +55,8 @@ define([
 
                 cropper = new Cropper(imageElement, {
                     aspectRatio: aspectRatio,
-                    viewMode: 1,
-                    autoCrop: !hasSavedCrop,
+                    viewMode: 0,
+                    autoCrop: true,
                     autoCropArea: 1,
                     responsive: true,
                     guides: true,
@@ -69,8 +70,23 @@ define([
                     zoomOnWheel: false,
                     ready: function () {
                         if (restoreData) {
-                            cropper.crop();
-                            cropper.setData(restoreData);
+                            // Get current crop data (from autoCropArea)
+                            var currentData = cropper.getData();
+
+                            // Check if saved size differs from current
+                            var sizeDiffers = Math.abs(currentData.width - restoreData.width) > 1 ||
+                                              Math.abs(currentData.height - restoreData.height) > 1;
+
+                            if (sizeDiffers) {
+                                // Size is different, set full data
+                                cropper.setData(restoreData);
+                            } else {
+                                // Size is same (100% crop), only set position
+                                cropper.setData({
+                                    x: restoreData.x,
+                                    y: restoreData.y
+                                });
+                            }
                         }
 
                         if (callbacks && typeof callbacks.onReady === 'function') {
@@ -78,13 +94,28 @@ define([
                         }
                     },
                     crop: function (event) {
+                        // Track crop data during drag
+                        lastCropData = event.detail;
+
                         if (callbacks && typeof callbacks.onCrop === 'function') {
                             callbacks.onCrop(event.detail);
                         }
                     },
                     cropend: function () {
-                        if (callbacks && typeof callbacks.onCropEnd === 'function') {
-                            callbacks.onCropEnd();
+                        if (callbacks && typeof callbacks.onCropEnd === 'function' && lastCropData) {
+                            // Clamp crop data to image bounds
+                            var imageData = cropper.getImageData();
+                            var clampedData = {
+                                x: Math.max(0, Math.min(lastCropData.x, imageData.naturalWidth - lastCropData.width)),
+                                y: Math.max(0, Math.min(lastCropData.y, imageData.naturalHeight - lastCropData.height)),
+                                width: Math.min(lastCropData.width, imageData.naturalWidth),
+                                height: Math.min(lastCropData.height, imageData.naturalHeight)
+                            };
+
+                            // Update cropper to show clamped position
+                            cropper.setData(clampedData);
+
+                            callbacks.onCropEnd(clampedData);
                         }
                     }
                 });

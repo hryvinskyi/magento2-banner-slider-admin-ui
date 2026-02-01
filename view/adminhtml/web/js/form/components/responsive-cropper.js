@@ -296,37 +296,212 @@ define([
         // ==================== FORM SAVE METHODS ====================
 
         /**
-         * Save crop data and then execute callback
-         * Only regenerates images if image-related settings changed
+         * Generate images for all breakpoints and include in form data
          *
-         * @param {Function} saveCallback
+         * @return {Promise}
          */
-        saveCropDataWithCallback: function (saveCallback) {
+        generateAllImagesForFormSubmit: function () {
+            var self = this;
+            var promises = [];
+
+            this.breakpoints().forEach(function (breakpoint) {
+                var cropData = self.getCropData(breakpoint.breakpoint_id);
+                var sourceImageUrl = self.getBreakpointSourceImageUrl(breakpoint.breakpoint_id);
+
+                if (!sourceImageUrl) {
+                    return;
+                }
+
+                var promise = self.generateImageForBreakpoint(breakpoint, cropData, sourceImageUrl);
+                promises.push(promise);
+            });
+
+            return Promise.all(promises);
+        },
+
+        /**
+         * Generate image for a single breakpoint
+         *
+         * @param {Object} breakpoint
+         * @param {Object} cropData
+         * @param {String} sourceImageUrl
+         * @return {Promise}
+         */
+        generateImageForBreakpoint: function (breakpoint, cropData, sourceImageUrl) {
             var self = this;
 
-            if (!this.bannerId() || this.breakpoints().length === 0) {
+            return new Promise(function (resolve) {
+                var img = new Image();
+                img.crossOrigin = 'anonymous';
+
+                img.onload = function () {
+                    self.processImageToBase64(img, breakpoint, cropData)
+                        .then(function (imageData) {
+                            var updated = Object.assign({}, cropData, imageData);
+                            self.setCropData(breakpoint.breakpoint_id, updated, true);
+                            resolve();
+                        })
+                        .catch(function () {
+                            resolve();
+                        });
+                };
+
+                img.onerror = function () {
+                    resolve();
+                };
+
+                img.src = sourceImageUrl;
+            });
+        },
+
+        /**
+         * Process image to base64 for form submission
+         *
+         * @param {HTMLImageElement} img
+         * @param {Object} breakpoint
+         * @param {Object} cropData
+         * @return {Promise}
+         */
+        processImageToBase64: function (img, breakpoint, cropData) {
+            var canvas = document.createElement('canvas');
+            var ctx = canvas.getContext('2d');
+
+            var cropX = cropData.crop_x || 0;
+            var cropY = cropData.crop_y || 0;
+            var cropWidth = cropData.crop_width || img.naturalWidth;
+            var cropHeight = cropData.crop_height || img.naturalHeight;
+            var targetWidth = breakpoint.target_width || cropWidth;
+
+            var targetHeight = (cropWidth > 0 && cropHeight > 0)
+                ? Math.round(targetWidth * cropHeight / cropWidth)
+                : (breakpoint.target_height || cropHeight);
+
+            canvas.width = targetWidth;
+            canvas.height = targetHeight;
+
+            ctx.drawImage(img, cropX, cropY, cropWidth, cropHeight, 0, 0, targetWidth, targetHeight);
+
+            var options = {
+                webpQuality: cropData.webp_quality || config.WEBP_QUALITY_DEFAULT,
+                avifQuality: cropData.avif_quality || config.AVIF_QUALITY_DEFAULT,
+                generateWebp: this.isWebpEnabled(cropData),
+                generateAvif: this.isAvifEnabled(cropData),
+                originalMimeType: 'image/jpeg'
+            };
+
+            return imageCompressor.compressAllFormats(canvas, options)
+                .then(function (results) {
+                    var imageData = {};
+                    var base64Promises = [];
+
+                    if (results.original && results.original.blob) {
+                        imageData.cropped_image_format = results.original.format || 'jpg';
+                        base64Promises.push(
+                            imageCompressor.blobToBase64(results.original.blob)
+                                .then(function (base64) {
+                                    imageData.cropped_image_base64 = base64;
+                                })
+                        );
+                    }
+
+                    if (results.webp && results.webp.blob) {
+                        base64Promises.push(
+                            imageCompressor.blobToBase64(results.webp.blob)
+                                .then(function (base64) {
+                                    imageData.webp_image_base64 = base64;
+                                })
+                        );
+                    }
+
+                    if (results.avif && results.avif.blob) {
+                        base64Promises.push(
+                            imageCompressor.blobToBase64(results.avif.blob)
+                                .then(function (base64) {
+                                    imageData.avif_image_base64 = base64;
+                                })
+                        );
+                    }
+
+                    return Promise.all(base64Promises).then(function () {
+                        return imageData;
+                    });
+                });
+        },
+
+        /**
+         * Sync crops data to the form data provider
+         * This ensures crops data is included in the form submission
+         */
+        syncCropsToProvider: function () {
+            var self = this;
+            var cropsData = [];
+
+            this.breakpoints().forEach(function (breakpoint) {
+                var cropData = self.getCropData(breakpoint.breakpoint_id);
+                var sourceImage = self.getBreakpointSourceImageFile(breakpoint.breakpoint_id);
+
+                if (!sourceImage && cropData.source_image) {
+                    sourceImage = cropData.source_image;
+                }
+
+                if (!sourceImage) {
+                    return;
+                }
+
+                cropsData.push({
+                    breakpoint_id: breakpoint.breakpoint_id,
+                    source_image: sourceImage,
+                    crop_x: cropData.crop_x || 0,
+                    crop_y: cropData.crop_y || 0,
+                    crop_width: cropData.crop_width || 0,
+                    crop_height: cropData.crop_height || 0,
+                    generate_webp: self.isWebpEnabled(cropData) ? 1 : 0,
+                    generate_avif: self.isAvifEnabled(cropData) ? 1 : 0,
+                    webp_quality: cropData.webp_quality || config.WEBP_QUALITY_DEFAULT,
+                    avif_quality: cropData.avif_quality || config.AVIF_QUALITY_DEFAULT,
+                    sort_order: breakpoint.sort_order || 0,
+                    cropped_image_base64: cropData.cropped_image_base64 || null,
+                    cropped_image_format: cropData.cropped_image_format || null,
+                    webp_image_base64: cropData.webp_image_base64 || null,
+                    avif_image_base64: cropData.avif_image_base64 || null
+                });
+            });
+
+            registry.async(this.provider)(function (provider) {
+                if (provider && typeof provider.set === 'function') {
+                    provider.set('data.responsive_crops_data', cropsData);
+                }
+            });
+
+            return cropsData;
+        },
+
+        /**
+         * Save crop data and then execute callback
+         * Generates images in browser and includes them in form submission
+         *
+         * @param {Function} saveCallback
+         * @param {Boolean} redirect
+         */
+        saveCropDataWithCallback: function (saveCallback, redirect) {
+            var self = this;
+
+            if (this.breakpoints().length === 0) {
                 saveCallback();
                 return;
             }
 
-            var changedBreakpointIds = this.getChangedBreakpointIds();
-
             self.isLoading(true);
+            self.compressionMessage($t('Generating images...'));
 
-            this.saveAllBreakpoints()
+            this.generateAllImagesForFormSubmit()
                 .then(function () {
-                    if (changedBreakpointIds.length > 0) {
-                        return self.generateBreakpointImagesByIds(changedBreakpointIds);
-                    }
-
-                    return Promise.resolve();
-                })
-                .then(function () {
-                    self.storeSavedCropsState();
+                    self.syncCropsToProvider();
                     self.isLoading(false);
                     saveCallback();
                 })
                 .catch(function () {
+                    self.syncCropsToProvider();
                     self.isLoading(false);
                     saveCallback();
                 });
@@ -336,14 +511,14 @@ define([
          * Save crop data and save form
          */
         generateAndSave: function () {
-            this.saveCropDataWithCallback(this.saveForm.bind(this));
+            this.saveCropDataWithCallback(this.saveForm.bind(this), true);
         },
 
         /**
          * Save crop data and save form with continue edit
          */
         generateAndSaveAndContinue: function () {
-            this.saveCropDataWithCallback(this.saveFormAndContinue.bind(this));
+            this.saveCropDataWithCallback(this.saveFormAndContinue.bind(this), false);
         },
 
         /**
@@ -1243,7 +1418,7 @@ define([
         toggleWebP: function (breakpoint) {
             var cropData = this.getCropData(breakpoint.breakpoint_id);
             cropData.generate_webp = cropData.generate_webp === false;
-            this.setCropData(breakpoint.breakpoint_id, cropData, true);
+            this.setCropData(breakpoint.breakpoint_id, cropData);
             this.autoSave();
         },
 
@@ -1255,7 +1430,7 @@ define([
         toggleAvif: function (breakpoint) {
             var cropData = this.getCropData(breakpoint.breakpoint_id);
             cropData.generate_avif = cropData.generate_avif !== true;
-            this.setCropData(breakpoint.breakpoint_id, cropData, true);
+            this.setCropData(breakpoint.breakpoint_id, cropData);
             this.autoSave();
         },
 

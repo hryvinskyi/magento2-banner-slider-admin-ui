@@ -117,7 +117,7 @@
         <!-- Cropper Area -->
         <div class="cropper-area" data-bind="visible: $parent.hasSourceImage(breakpoint_id)">
             <h4 data-bind="i18n: 'Crop Area'"></h4>
-            <div class="cropper-container">
+            <div class="cropper-wrapper">
                 <img data-bind="attr: { src: $parent.getBreakpointSourceImageUrl(breakpoint_id) },
                                event: { load: function(data, event) { $parent.initCropper(event.target, $data); } }"
                      alt="Source Image"/>

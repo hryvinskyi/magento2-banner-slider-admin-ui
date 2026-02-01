@@ -10,6 +10,9 @@
     <preference for="Hryvinskyi\BannerSliderAdminUi\Api\DataProvider\PrepareDataProcessorInterface"
                 type="Hryvinskyi\BannerSliderAdminUi\Model\DataProvider\PrepareDataProcessor"/>
 
+    <preference for="Hryvinskyi\BannerSliderAdminUi\Api\ResponsiveCropsSaverInterface"
+                type="Hryvinskyi\BannerSliderAdminUi\Model\ResponsiveCropsSaver"/>
+
     <!-- UI Component Data Provider Configuration -->
     <type name="Magento\Framework\View\Element\UiComponent\DataProvider\CollectionFactory">
         <arguments>
@@ -56,6 +59,25 @@
     <type name="Hryvinskyi\BannerSliderAdminUi\Ui\DataProvider\Banner\FormDataProvider">
         <arguments>
             <argument name="pool" xsi:type="object">Hryvinskyi\BannerSliderAdminUi\Ui\DataProvider\Banner\Form\Modifier\Pool</argument>
+        </arguments>
+    </type>
+
+    <!-- EntityManager Extension Pool for Banner Responsive Crops -->
+    <type name="Magento\Framework\EntityManager\Operation\ExtensionPool">
+        <arguments>
+            <argument name="extensionActions" xsi:type="array">
+                <item name="Hryvinskyi\BannerSliderApi\Api\Data\BannerInterface" xsi:type="array">
+                    <item name="read" xsi:type="array">
+                        <item name="responsiveCropsReader" xsi:type="string">Hryvinskyi\BannerSliderAdminUi\Model\ResourceModel\Banner\Relation\ResponsiveCrops\ReadHandler</item>
+                    </item>
+                    <item name="create" xsi:type="array">
+                        <item name="responsiveCropsSaver" xsi:type="string">Hryvinskyi\BannerSliderAdminUi\Model\ResourceModel\Banner\Relation\ResponsiveCrops\SaveHandler</item>
+                    </item>
+                    <item name="update" xsi:type="array">
+                        <item name="responsiveCropsSaver" xsi:type="string">Hryvinskyi\BannerSliderAdminUi\Model\ResourceModel\Banner\Relation\ResponsiveCrops\SaveHandler</item>
+                    </item>
+                </item>
+            </argument>
         </arguments>
     </type>
 </config>
