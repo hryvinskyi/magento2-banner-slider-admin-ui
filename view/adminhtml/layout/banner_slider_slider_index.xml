@@ -1,11 +1,28 @@
 <?xml version="1.0"?>
 <!--
-  ~ Copyright (c) 2025. Volodymyr Hryvinskyi. All rights reserved.
-  ~ @author: <mailto:volodymyr@hryvinskyi.com>
-  -->
+/**
+ * Copyright (c) 2026. Volodymyr Hryvinskyi. All rights reserved.
+ * Author: Volodymyr Hryvinskyi <volodymyr@hryvinskyi.com>
+ * GitHub: https://github.com/hryvinskyi
+ */
+-->
+
 <page xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
       xsi:noNamespaceSchemaLocation="urn:magento:framework:View/Layout/etc/page_configuration.xsd">
+    <update handle="banner_slider_menu"/>
     <body>
+        <referenceBlock name="hryvinskyi.banner.slider.menu">
+            <arguments>
+                <argument name="menu_title" xsi:type="string" translate="true">Banner Slider: Sliders</argument>
+                <argument name="items" xsi:type="array">
+                    <item name="sliders" xsi:type="array">
+                        <item name="class" xsi:type="array">
+                            <item name="current" xsi:type="boolean">true</item>
+                        </item>
+                    </item>
+                </argument>
+            </arguments>
+        </referenceBlock>
         <referenceContainer name="content">
             <uiComponent name="hryvinskyi_banner_slider_slider_listing"/>
         </referenceContainer>
