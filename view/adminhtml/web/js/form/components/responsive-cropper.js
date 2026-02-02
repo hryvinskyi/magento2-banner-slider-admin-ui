@@ -1,4 +1,4 @@
-/**
+/*
  * Copyright (c) 2025-2026. Volodymyr Hryvinskyi. All rights reserved.
  * Author: Volodymyr Hryvinskyi <volodymyr@hryvinskyi.com>
  * GitHub: https://github.com/hryvinskyi
@@ -1277,17 +1277,68 @@ define([
          * @param {Array|Object} value
          */
         updateDesktopImageUrl: function (value) {
+            var oldFile = this.desktopImageFile;
             var url = null;
+            var newFile = null;
 
             if (value && Array.isArray(value) && value.length > 0) {
                 url = value[0].url || null;
-                this.desktopImageFile = value[0].file || value[0].name || null;
-            } else {
-                this.desktopImageFile = null;
+                newFile = value[0].file || value[0].name || null;
             }
 
+            this.desktopImageFile = newFile;
             this.desktopImageUrl(url);
             this.destroyCropper();
+
+            // Reset breakpoints when:
+            // 1. Image is deleted (oldFile exists, newFile is null)
+            // 2. Image is replaced (both exist and different)
+            var imageDeleted = oldFile && !newFile;
+            var imageReplaced = oldFile && newFile && oldFile !== newFile;
+
+            if (imageDeleted || imageReplaced) {
+                this.resetBreakpointsUsingDesktopImage();
+            }
+        },
+
+        /**
+         * Reset crop data for all breakpoints that use the desktop image (no custom image)
+         */
+        resetBreakpointsUsingDesktopImage: function () {
+            var self = this;
+
+            this.breakpoints().forEach(function (breakpoint) {
+                var breakpointId = breakpoint.breakpoint_id;
+
+                // Skip breakpoints with custom images
+                if (self.hasCustomBreakpointImage(breakpointId)) {
+                    return;
+                }
+
+                var cropData = self.getCropData(breakpointId);
+
+                // Reset crop coordinates and clear generated images
+                cropData.crop_x = 0;
+                cropData.crop_y = 0;
+                cropData.crop_width = 0;
+                cropData.crop_height = 0;
+                cropData.source_image = null;
+                cropData.source_image_url = null;
+                cropData.cropped_image_url = null;
+                cropData.webp_image_url = null;
+                cropData.avif_image_url = null;
+                cropData.cropped_image_base64 = null;
+                cropData.webp_image_base64 = null;
+                cropData.avif_image_base64 = null;
+                cropData.original_size = null;
+                cropData.webp_size = null;
+                cropData.avif_size = null;
+
+                self.setCropData(breakpointId, cropData, true);
+            });
+
+            // Trigger observable update
+            this.crops(Object.assign({}, this.crops()));
         },
 
         // ==================== CROPPER METHODS ====================

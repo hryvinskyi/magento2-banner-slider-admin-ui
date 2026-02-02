@@ -16,6 +16,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Added `generateChangedImagesForFormSubmit()` to only process changed breakpoints
   - Save now skips image generation entirely when no changes detected
   - Fixes 3-4 second delay when saving banners without opening Image Settings tab
+- Images being deleted on save when no new images provided
+  - `ResponsiveCropsSaver::saveImages()` now skips processing if no base64 images in request
+  - Existing images are preserved when saving without regenerating
+- Breakpoint images not updating when desktop image changed
+  - Added `resetBreakpointsUsingDesktopImage()` to clear crop data for non-custom breakpoints
+  - When desktop image changes, all breakpoints using it are reset and will regenerate on save
+  - Also handles image deletion scenario (reset on delete, not just replace)
+- Cropper not initializing after delete and re-upload of desktop image
+  - Changed cropper-area from `visible` to `if` binding in template
+  - Forces DOM element recreation ensuring `load` event fires properly
 
 ## [1.0.4] - 2026-02-02
 

@@ -1,6 +1,7 @@
 <!--
-  ~ Copyright (c) 2025. Volodymyr Hryvinskyi. All rights reserved.
-  ~ @author: <mailto:volodymyr@hryvinskyi.com>
+  ~ Copyright (c) 2025-2026. Volodymyr Hryvinskyi. All rights reserved.
+  ~ Author: Volodymyr Hryvinskyi <volodymyr@hryvinskyi.com>
+  ~ GitHub: https://github.com/hryvinskyi
   -->
 <div class="responsive-cropper-container" data-bind="visible: breakpoints().length > 0">
     <!-- Loading Overlay -->
@@ -110,12 +111,15 @@
         </div>
 
         <!-- No Image Message -->
-        <div class="no-source-image-message" data-bind="visible: !$parent.hasSourceImage(breakpoint_id)">
+        <!-- ko ifnot: $parent.hasSourceImage(breakpoint_id) -->
+        <div class="no-source-image-message">
             <p data-bind="i18n: 'Please upload a Desktop Image above or a custom image for this breakpoint.'"></p>
         </div>
+        <!-- /ko -->
 
-        <!-- Cropper Area -->
-        <div class="cropper-area" data-bind="visible: $parent.hasSourceImage(breakpoint_id)">
+        <!-- Cropper Area - using 'if' binding to force DOM recreation when image changes -->
+        <!-- ko if: $parent.hasSourceImage(breakpoint_id) -->
+        <div class="cropper-area">
             <h4 data-bind="i18n: 'Crop Area'"></h4>
             <div class="cropper-wrapper">
                 <img data-bind="attr: { src: $parent.getBreakpointSourceImageUrl(breakpoint_id) },
@@ -123,6 +127,7 @@
                      alt="Source Image"/>
             </div>
         </div>
+        <!-- /ko -->
 
         <!-- Quality Settings -->
         <div class="quality-settings" data-bind="visible: $parent.hasSourceImage(breakpoint_id)">

@@ -111,6 +111,14 @@ class ResponsiveCropsSaver implements ResponsiveCropsSaverInterface
         int $breakpointId,
         array $data
     ): void {
+        // Skip image processing if no new images provided
+        if (empty($data['cropped_image_base64'])
+            && empty($data['webp_image_base64'])
+            && empty($data['avif_image_base64'])
+        ) {
+            return;
+        }
+
         $breakpointIdentifier = $this->getBreakpointIdentifier($breakpointId);
         $hash = $this->generateImageHash($data);
         $basePath = $this->imagePathConfig->getResponsivePath();
