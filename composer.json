@@ -15,7 +15,8 @@
         "magento/module-ui": "*",
         "magento/module-backend": "*",
         "hryvinskyi/magento2-banner-slider-api": "*",
-        "hryvinskyi/magento2-banner-slider": "*"
+        "hryvinskyi/magento2-banner-slider": "*",
+        "hryvinskyi/magento2-configuration-fields": "^1.0.10"
     },
     "autoload": {
         "files": [

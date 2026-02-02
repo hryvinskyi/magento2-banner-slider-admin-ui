@@ -372,6 +372,32 @@
             </formElements>
         </field>
     </fieldset>
+    <fieldset name="custom_styles">
+        <settings>
+            <label translate="true">Custom Styles</label>
+            <collapsible>true</collapsible>
+        </settings>
+        <field name="custom_css" formElement="textarea">
+            <argument name="data" xsi:type="array">
+                <item name="config" xsi:type="array">
+                    <item name="component" xsi:type="string">Hryvinskyi_ConfigurationFields/js/form/element/codemirror</item>
+                    <item name="template" xsi:type="string">ui/form/field</item>
+                    <item name="rows" xsi:type="number">15</item>
+                    <item name="editorConfig" xsi:type="array">
+                        <item name="mode" xsi:type="string">css</item>
+                        <item name="theme" xsi:type="string">default</item>
+                        <item name="lineNumbers" xsi:type="boolean">true</item>
+                        <item name="lineWrapping" xsi:type="boolean">true</item>
+                    </item>
+                </item>
+            </argument>
+            <settings>
+                <label translate="true">Custom CSS</label>
+                <notice translate="true">Add custom CSS styles for this slider. Use .banner-slider-{slider_id} as the root selector.</notice>
+                <dataType>text</dataType>
+            </settings>
+        </field>
+    </fieldset>
     <fieldset name="breakpoints">
         <settings>
             <label translate="true">Responsive Breakpoints</label>

@@ -5,6 +5,18 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.0.5] - 2026-02-02
+
+### Added
+- Custom CSS field for sliders using CodeMirror editor in new "Custom Styles" fieldset
+
+### Fixed
+- Unnecessary image generation on banner save when no crop settings changed
+  - Added `hasBreakpointsNeedingGeneration()` to detect if regeneration is required
+  - Added `generateChangedImagesForFormSubmit()` to only process changed breakpoints
+  - Save now skips image generation entirely when no changes detected
+  - Fixes 3-4 second delay when saving banners without opening Image Settings tab
+
 ## [1.0.4] - 2026-02-02
 
 ### Added

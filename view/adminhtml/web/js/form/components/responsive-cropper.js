@@ -301,10 +301,37 @@ define([
          * @return {Promise}
          */
         generateAllImagesForFormSubmit: function () {
+            return this.generateImagesForFormSubmit(null);
+        },
+
+        /**
+         * Generate images only for changed breakpoints
+         *
+         * @return {Promise}
+         */
+        generateChangedImagesForFormSubmit: function () {
+            var changedIds = this.getChangedBreakpointIds();
+            return this.generateImagesForFormSubmit(changedIds);
+        },
+
+        /**
+         * Generate images for specified breakpoints (or all if breakpointIds is null)
+         *
+         * @param {Array|null} breakpointIds
+         * @return {Promise}
+         */
+        generateImagesForFormSubmit: function (breakpointIds) {
             var self = this;
             var promises = [];
 
             this.breakpoints().forEach(function (breakpoint) {
+                var id = String(breakpoint.breakpoint_id);
+
+                // Skip if we have a filter and this breakpoint is not in it
+                if (breakpointIds !== null && breakpointIds.indexOf(id) === -1) {
+                    return;
+                }
+
                 var cropData = self.getCropData(breakpoint.breakpoint_id);
                 var sourceImageUrl = self.getBreakpointSourceImageUrl(breakpoint.breakpoint_id);
 
@@ -477,6 +504,43 @@ define([
         },
 
         /**
+         * Check if there are any breakpoints that need image generation
+         *
+         * @returns {Boolean}
+         */
+        hasBreakpointsNeedingGeneration: function () {
+            var self = this;
+            var needsGeneration = false;
+
+            this.breakpoints().forEach(function (breakpoint) {
+                if (needsGeneration) {
+                    return;
+                }
+
+                var cropData = self.getCropData(breakpoint.breakpoint_id);
+                var sourceImageUrl = self.getBreakpointSourceImageUrl(breakpoint.breakpoint_id);
+
+                if (!sourceImageUrl) {
+                    return;
+                }
+
+                // Check if this breakpoint has changes that need regeneration
+                var changedIds = self.getChangedBreakpointIds();
+                if (changedIds.indexOf(String(breakpoint.breakpoint_id)) !== -1) {
+                    needsGeneration = true;
+                    return;
+                }
+
+                // Check if crop data exists but images were never generated
+                if (cropData.crop_width > 0 && cropData.crop_height > 0 && !cropData.cropped_image_url) {
+                    needsGeneration = true;
+                }
+            });
+
+            return needsGeneration;
+        },
+
+        /**
          * Save crop data and then execute callback
          * Generates images in browser and includes them in form submission
          *
@@ -486,7 +550,16 @@ define([
         saveCropDataWithCallback: function (saveCallback, redirect) {
             var self = this;
 
+            // If no breakpoints, just save
             if (this.breakpoints().length === 0) {
+                saveCallback();
+                return;
+            }
+
+            // Check if any breakpoints have changes that need image generation
+            if (!this.hasBreakpointsNeedingGeneration()) {
+                // No changes - just sync existing data and save
+                this.syncCropsToProvider();
                 saveCallback();
                 return;
             }
@@ -494,9 +567,10 @@ define([
             self.isLoading(true);
             self.compressionMessage($t('Generating images...'));
 
-            this.generateAllImagesForFormSubmit()
+            this.generateChangedImagesForFormSubmit()
                 .then(function () {
                     self.syncCropsToProvider();
+                    self.storeSavedCropsState();
                     self.isLoading(false);
                     saveCallback();
                 })
