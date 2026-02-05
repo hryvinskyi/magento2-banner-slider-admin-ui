@@ -16,10 +16,10 @@ use Magento\Framework\Data\OptionSourceInterface;
  */
 class AspectRatio implements OptionSourceInterface
 {
-    public const string CUSTOM = 'custom';
+    public const CUSTOM = 'custom';
 
     /** @var array<int, string> */
-    public const array PREDEFINED_RATIOS = ['16:9', '4:3', '21:9', '1:1', '9:16'];
+    public const PREDEFINED_RATIOS = ['16:9', '4:3', '21:9', '1:1', '9:16'];
 
     /**
      * @inheritDoc
