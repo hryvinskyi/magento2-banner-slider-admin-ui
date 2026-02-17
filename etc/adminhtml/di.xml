@@ -260,4 +260,13 @@
             <argument name="uploadImage" xsi:type="object">Hryvinskyi\BannerSliderAdminUi\Model\MainImageUploader</argument>
         </arguments>
     </type>
+
+    <!-- Register config section → menu layout handle mapping -->
+    <type name="Hryvinskyi\Base\Observer\AddMenuHandleToConfigPage">
+        <arguments>
+            <argument name="sectionHandleMap" xsi:type="array">
+                <item name="hryvinskyi_banner_slider" xsi:type="string">banner_slider_menu</item>
+            </argument>
+        </arguments>
+    </type>
 </config>
