@@ -38,8 +38,8 @@ The ids are those of 1.x, so existing role assignments keep working.
   the lowest priority value), priority, store views ("All Store Views" = store 0), customer groups ("ALL GROUPS" =
   every group, including groups created later), and the From / To window.
 - **Dates** are entered in the store's time zone and stored in UTC.
-- **Slider Options:** effect, autoplay and its timeout (at least 1000 ms), loop, arrows, dots, lazy loading, auto
-  width/height, preload count.
+- **Slider Options:** effect, autoplay and its timeout (at least 1000 ms), "Show Pause/Play Button" (shown only
+  while autoplay is on; on by default), loop, arrows, dots, lazy loading, auto width/height, preload count.
 - **Slides per Page:** rules of the form "from this min width, show N slides with this gap" (N from 1 to 10; gap
   empty or a CSS length such as `16px` or `1rem`).
 - **Custom Styles:** plain CSS for `.banner-slider-{slider_id}`; `<` is refused.

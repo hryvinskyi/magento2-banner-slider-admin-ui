@@ -215,6 +215,33 @@
                 </checkbox>
             </formElements>
         </field>
+        <!-- Shown only while autoplay is on: the storefront renders the button only for a slider that plays -->
+        <field name="show_autoplay_toggle" formElement="checkbox">
+            <argument name="data" xsi:type="array">
+                <item name="config" xsi:type="array">
+                    <item name="default" xsi:type="number">1</item>
+                    <item name="imports" xsi:type="array">
+                        <item name="visible" xsi:type="string">${ $.parentName }.auto_play:checked</item>
+                    </item>
+                </item>
+            </argument>
+            <settings>
+                <dataType>boolean</dataType>
+                <label translate="true">Show Pause/Play Button</label>
+                <notice translate="true">The visible control visitors use to stop the slides moving. Keep it on unless the slider has another way to pause.</notice>
+            </settings>
+            <formElements>
+                <checkbox>
+                    <settings>
+                        <valueMap>
+                            <map name="false" xsi:type="number">0</map>
+                            <map name="true" xsi:type="number">1</map>
+                        </valueMap>
+                        <prefer>toggle</prefer>
+                    </settings>
+                </checkbox>
+            </formElements>
+        </field>
         <field name="auto_play_timeout" formElement="input">
             <argument name="data" xsi:type="array">
                 <item name="config" xsi:type="array">

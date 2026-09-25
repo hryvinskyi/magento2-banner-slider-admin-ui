@@ -62,6 +62,7 @@ class FakeSlider implements SliderInterface
         'loop' => true,
         'lazy_load' => true,
         'auto_play' => true,
+        'show_autoplay_toggle' => true,
         'nav' => true,
         'dots' => true,
     ];
@@ -305,6 +306,22 @@ class FakeSlider implements SliderInterface
     public function setAutoPlayEnabled(bool $enabled): SliderInterface
     {
         return $this->toggle('auto_play', $enabled);
+    }
+
+    /**
+     * @inheritDoc
+     */
+    public function isAutoPlayToggleEnabled(): bool
+    {
+        return $this->toggles['show_autoplay_toggle'];
+    }
+
+    /**
+     * @inheritDoc
+     */
+    public function setAutoPlayToggleEnabled(bool $enabled): SliderInterface
+    {
+        return $this->toggle('show_autoplay_toggle', $enabled);
     }
 
     /**

@@ -78,6 +78,7 @@ class OptionsMapper implements SliderFormMapperInterface
             SliderInterface::LOOP => $slider->isLoopEnabled() ? '1' : '0',
             SliderInterface::LAZY_LOAD => $slider->isLazyLoadEnabled() ? '1' : '0',
             SliderInterface::AUTO_PLAY => $slider->isAutoPlayEnabled() ? '1' : '0',
+            SliderInterface::SHOW_AUTOPLAY_TOGGLE => $slider->isAutoPlayToggleEnabled() ? '1' : '0',
             SliderInterface::NAV => $slider->isNavigationEnabled() ? '1' : '0',
             SliderInterface::DOTS => $slider->isPaginationEnabled() ? '1' : '0',
             SliderInterface::AUTO_PLAY_TIMEOUT => (string)$slider->getAutoPlayInterval(),
@@ -99,6 +100,10 @@ class OptionsMapper implements SliderFormMapperInterface
             SliderInterface::LOOP => [__('Loop'), $slider->setLoopEnabled(...)],
             SliderInterface::LAZY_LOAD => [__('Lazy Load Images'), $slider->setLazyLoadEnabled(...)],
             SliderInterface::AUTO_PLAY => [__('Autoplay'), $slider->setAutoPlayEnabled(...)],
+            SliderInterface::SHOW_AUTOPLAY_TOGGLE => [
+                __('Show Pause/Play Button'),
+                $slider->setAutoPlayToggleEnabled(...),
+            ],
             SliderInterface::NAV => [__('Show Navigation Arrows'), $slider->setNavigationEnabled(...)],
             SliderInterface::DOTS => [__('Show Pagination Dots'), $slider->setPaginationEnabled(...)],
         ];

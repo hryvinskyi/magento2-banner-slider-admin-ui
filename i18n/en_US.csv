@@ -81,6 +81,8 @@
 "Loop","Loop"
 "Lazy Load Images","Lazy Load Images"
 "Autoplay","Autoplay"
+"Show Pause/Play Button","Show Pause/Play Button"
+"The visible control visitors use to stop the slides moving. Keep it on unless the slider has another way to pause.","The visible control visitors use to stop the slides moving. Keep it on unless the slider has another way to pause."
 "Show Navigation Arrows","Show Navigation Arrows"
 "Show Pagination Dots","Show Pagination Dots"
 "Slides per page row %1 is invalid: check min width, slides (1-%2) and gap (e.g. 16px).","Slides per page row %1 is invalid: check min width, slides (1-%2) and gap (e.g. 16px)."

@@ -5,6 +5,15 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.1.0] - 2026-09-25
+
+Requires `hryvinskyi/magento2-banner-slider-api` 2.1 and `hryvinskyi/magento2-banner-slider` 2.1.
+
+### Added
+- Slider form: "Show Pause/Play Button" in Slider Options, right after Autoplay and shown only while Autoplay is on;
+  checked by default. Saved through the options mapper (`show_autoplay_toggle`); a post without the field leaves
+  the stored setting unchanged.
+
 ## [2.0.0] - 2026-09-25
 
 A breaking release on `hryvinskyi/magento2-banner-slider-api` 2.0 and `hryvinskyi/magento2-banner-slider` 2.0.
