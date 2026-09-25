@@ -1,0 +1,19 @@
+<?xml version="1.0"?>
+<!--
+/**
+ * Copyright (c) 2026. Volodymyr Hryvinskyi. All rights reserved.
+ * Author: Volodymyr Hryvinskyi <volodymyr@hryvinskyi.com>
+ * GitHub: https://github.com/hryvinskyi
+ */
+-->
+<csp_whitelist xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+               xsi:noNamespaceSchemaLocation="urn:magento:module:Magento_Csp:etc/csp_whitelist.xsd">
+    <policies>
+        <!-- The crop editor decodes the source image and shows the images it encodes from blob: URLs. -->
+        <policy id="img-src">
+            <values>
+                <value id="hryvinskyi_banner_slider_admin_blob" type="host">blob:</value>
+            </values>
+        </policy>
+    </policies>
+</csp_whitelist>
