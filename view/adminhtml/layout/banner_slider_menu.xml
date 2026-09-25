@@ -14,25 +14,29 @@
     </head>
     <body>
         <referenceBlock name="page.title">
-            <block class="Hryvinskyi\Base\Block\Adminhtml\Menu" name="hryvinskyi.banner.slider.menu">
+            <block class="Hryvinskyi\Base\Block\Adminhtml\Menu" name="hryvinskyi.banner.slider.menu"
+                   aclResource="Hryvinskyi_BannerSlider::banner_slider">
                 <arguments>
                     <argument name="menu_title" xsi:type="string" translate="true">Banner Slider</argument>
                     <argument name="items" xsi:type="array">
                         <item name="sliders" xsi:type="array">
                             <item name="label" xsi:type="string" translate="true">Sliders</item>
                             <item name="route" xsi:type="string">banner_slider/slider/index</item>
+                            <item name="resource" xsi:type="string">Hryvinskyi_BannerSlider::slider</item>
                             <item name="sort_order" xsi:type="number">10</item>
                             <item name="icon" xsi:type="string"><![CDATA[<svg class="menu-item-icon" viewBox="0 0 32 32" xmlns="http://www.w3.org/2000/svg"><polyline fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" points="25,11 27,13 25,15"/><polyline fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" points="7,11 5,13 7,15"/><path fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" d="M29,23H3c-1.1,0-2-0.9-2-2V5c0-1.1,0.9-2,2-2h26c1.1,0,2,0.9,2,2v16C31,22.1,30.1,23,29,23z"/><circle fill="none" stroke="currentColor" stroke-width="2" cx="16" cy="28" r="1"/><circle fill="none" stroke="currentColor" stroke-width="2" cx="10" cy="28" r="1"/><circle fill="none" stroke="currentColor" stroke-width="2" cx="22" cy="28" r="1"/></svg>]]></item>
                         </item>
                         <item name="banners" xsi:type="array">
                             <item name="label" xsi:type="string" translate="true">Banners</item>
                             <item name="route" xsi:type="string">banner_slider/banner/index</item>
+                            <item name="resource" xsi:type="string">Hryvinskyi_BannerSlider::banner</item>
                             <item name="sort_order" xsi:type="number">20</item>
                             <item name="icon" xsi:type="string"><![CDATA[<svg class="menu-item-icon" viewBox="0 0 32 32" xmlns="http://www.w3.org/2000/svg"><rect x="3" y="5" width="26" height="18" rx="2" ry="2" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><circle cx="10" cy="12" r="2" fill="none" stroke="currentColor" stroke-width="2"/><polyline fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" points="29,19 22,14 17,18 12,15 3,21"/><line x1="3" y1="27" x2="29" y2="27" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>]]></item>
                         </item>
                         <item name="configuration" xsi:type="array">
                             <item name="label" xsi:type="string" translate="true">Configuration</item>
                             <item name="route" xsi:type="string">adminhtml/system_config/edit</item>
+                            <item name="resource" xsi:type="string">Hryvinskyi_BannerSlider::config</item>
                             <item name="route_params" xsi:type="array">
                                 <item name="section" xsi:type="string">hryvinskyi_banner_slider</item>
                             </item>

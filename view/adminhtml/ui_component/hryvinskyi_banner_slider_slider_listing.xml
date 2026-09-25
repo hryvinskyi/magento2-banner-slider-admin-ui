@@ -19,11 +19,7 @@
             <dep>hryvinskyi_banner_slider_slider_listing.hryvinskyi_banner_slider_slider_listing_data_source</dep>
         </deps>
         <buttons>
-            <button name="add">
-                <url path="*/*/new"/>
-                <class>primary</class>
-                <label translate="true">Add New Slider</label>
-            </button>
+            <button name="add" class="Hryvinskyi\BannerSliderAdminUi\Block\Adminhtml\Slider\Listing\AddNewButton"/>
         </buttons>
     </settings>
     <dataSource name="hryvinskyi_banner_slider_slider_listing_data_source" component="Magento_Ui/js/grid/provider">
@@ -34,7 +30,7 @@
             <updateUrl path="mui/index/render"/>
         </settings>
         <aclResource>Hryvinskyi_BannerSlider::slider</aclResource>
-        <dataProvider class="Hryvinskyi\BannerSliderAdminUi\Ui\Listing\DataProvider\Slider" name="hryvinskyi_banner_slider_slider_listing_data_source">
+        <dataProvider class="Magento\Framework\View\Element\UiComponent\DataProvider\DataProvider" name="hryvinskyi_banner_slider_slider_listing_data_source">
             <settings>
                 <requestFieldName>slider_id</requestFieldName>
                 <primaryFieldName>slider_id</primaryFieldName>
@@ -50,7 +46,10 @@
         <filterSearch name="fulltext"/>
         <filters name="listing_filters"/>
         <massaction name="listing_massaction" component="Magento_Ui/js/grid/tree-massactions">
-            <action name="delete">
+            <action name="delete" class="Hryvinskyi\BannerSliderAdminUi\Ui\Component\MassAction\AuthorizedAction">
+                <argument name="data" xsi:type="array">
+                    <item name="aclResource" xsi:type="string">Hryvinskyi_BannerSlider::slider_delete</item>
+                </argument>
                 <settings>
                     <confirm>
                         <message translate="true">Are you sure you want to delete selected sliders?</message>
@@ -113,7 +112,6 @@
                 sortOrder="50">
             <settings>
                 <label translate="true">Customer Group</label>
-                <bodyTmpl>ui/grid/cells/html</bodyTmpl>
                 <sortable>false</sortable>
             </settings>
         </column>
@@ -157,7 +155,7 @@
         </column>
         <column name="status" component="Hryvinskyi_BannerSliderAdminUi/js/grid/columns/status" sortOrder="110">
             <settings>
-                <options class="Hryvinskyi\BannerSliderAdminUi\Model\Source\Status"/>
+                <options class="Hryvinskyi\BannerSlider\Model\Source\StatusOptions"/>
                 <filter>select</filter>
                 <dataType>select</dataType>
                 <label translate="true">Status</label>

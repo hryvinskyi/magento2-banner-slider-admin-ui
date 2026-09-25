@@ -9,33 +9,20 @@ declare(strict_types=1);
 
 namespace Hryvinskyi\BannerSliderAdminUi\Block\Adminhtml\Banner\Edit;
 
-use Magento\Framework\View\Element\UiComponent\Control\ButtonProviderInterface;
+use Hryvinskyi\BannerSliderAdminUi\Block\Adminhtml\GenericButton;
 
 /**
- * Back button for banner form
+ * "Back" on the banner form: returns to the banner grid.
  */
-class BackButton extends GenericButton implements ButtonProviderInterface
+class BackButton extends GenericButton
 {
     /**
-     * @inheritDoc
+     * Button data; none when the button does not apply
+     *
+     * @return array<string, mixed>
      */
     public function getButtonData(): array
     {
-        return [
-            'label' => __('Back'),
-            'on_click' => sprintf("location.href = '%s';", $this->getBackUrl()),
-            'class' => 'back',
-            'sort_order' => 10,
-        ];
-    }
-
-    /**
-     * Get URL for back button
-     *
-     * @return string
-     */
-    private function getBackUrl(): string
-    {
-        return $this->getUrl('*/*/');
+        return $this->linkButton(__('Back'), $this->getUrl('*/*/'), 'back', 10);
     }
 }

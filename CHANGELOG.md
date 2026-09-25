@@ -5,12 +5,86 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.0.0] - 2026-09-25
+
+A breaking release on `hryvinskyi/magento2-banner-slider-api` 2.0 and `hryvinskyi/magento2-banner-slider` 2.0.
+
+### Added
+- `etc/acl.xml` (moved from the core module): the same `Hryvinskyi_BannerSlider::` resource ids as 1.x, plus
+  `Hryvinskyi_BannerSlider::config` under Stores > Configuration. Buttons, row actions and mass actions are hidden
+  from admins without the matching resource; the in-page menu shows only permitted items.
+- Configuration section `hryvinskyi_banner_slider`: default extra crop formats, WebP/AVIF quality, image and video
+  upload limits, privacy-enhanced video embeds, and the daily unused-media clean-up switch.
+- Slider form: "Slides per Page" rules (min width, slides, gap), "All Store Views", date and time in the store's
+  time zone (stored in UTC).
+- `banner_slider/breakpoint/imageUpload`: crop source image upload through the core image upload service.
+- Form mapping extension point: `Api/Form/BannerFormMapperInterface` and `Api/Form/SliderFormMapperInterface`
+  pools, with `Api/Form/PostData` and `Api/Form/FieldErrors`.
+- `i18n/en_US.csv`, unit tests, and node tests of the crop editor's modules (`Test/Js/run.mjs`).
+- Crop editor: "Show this crop on the storefront", "Delete Crop", a changed-crop marker on the tabs, file sizes and
+  savings in the preview comparison.
+- Validation rules `validate-hbs-link-url`, `validate-hbs-identifier`, `validate-hbs-aspect-ratio`,
+  `validate-hbs-location` and `validate-hbs-css-length`, matching the server rules.
+- `view/adminhtml/web/js/lib/THIRD_PARTY.md` (bundled libraries, versions, licences) and `etc/config.xml`, which
+  excludes the bundled codecs from JavaScript minification.
+
+### Changed
+- Banners are saved only through the banner editor and sliders only through the slider editor, each in one
+  transaction; breakpoints are the complete posted set (hidden `breakpoints_submitted` marker), and a post without
+  the marker leaves them unchanged.
+- Every invalid field is reported at once, with a translated message naming it, instead of "Something went wrong".
+- A failed save brings the form of the same banner or slider back with the entered values (crop areas included;
+  browser-prepared crop images are dropped and prepared again). Emptied lists stay empty, a removed image stays
+  removed, and the crop editor shows the breakpoints of the slider that was submitted.
+- Mass delete in the banner grid of one slider deletes only that slider's banners, "select all" included.
+- The banner image and video fields offer the Upload button only; a file without a stored path is refused with a
+  field error instead of removing the image and its crops.
+- A new banner starts with no slider chosen ("-- Please Select --"); the slider is required.
+- The crop editor's requests tell an ended admin session apart and ask the admin to sign in again.
+- Uploaded image and video paths are accepted only when they are the stored value or a file of the upload folder.
+- Browser-prepared crop images are decoded strictly, capped by the image upload limit, and their file names and
+  extensions never come from the request.
+- Upload endpoints answer the service's message for refused files and a generic message for anything else.
+- Mass delete resolves the selection in one query; the edit pages redirect with a message for a deleted entity.
+- Option sources come from the core module; listings use the core grid collections; the customer group column
+  renders plain text.
+- Requires PHP 8.3 or 8.4, Magento 2.4.7+, `hryvinskyi/magento2-base` ^2.2.
+- The crop editor is split into small modules: pure logic under `js/cropper/` (geometry, payload and size budget,
+  change tracking, format support, encoding, submission, editor state, file sizes), and a Knockout component that
+  wires them to the page.
+- Crops are posted with the banner form in the new `responsive_crops` format; only changed crops are sent. The
+  request stays under 80 % of `post_max_size` by leaving the largest images to the server.
+- The fallback crop image is JPEG for a JPEG source and PNG for every other source (transparent PNGs no longer turn
+  black), the same rule the server applies; a variant in the fallback format is not encoded twice.
+- Default formats and qualities, and which formats the server can encode, come from the configuration; formats only
+  the server can encode are marked "Generated on save".
+- Every failed request or encoding is shown to the admin as plain text; a failed encoding no longer blocks the save.
+- Changing the banner's slider loads its breakpoints from the breakpoints endpoint URL in the editor config.
+- The custom video aspect ratio field is shown and required only for the "Custom" choice and is validated once, by
+  the same `W:H` rule as the server. The video uploader accepts MP4 (also as `.m4v`) and WebM only.
+- The status column accepts `1`, `'1'` and `true`.
+- Every visible string of the templates is translatable; a breakpoint without a target height shows "× auto".
+
+### Removed
+- EntityManager extension handlers and the `responsive_crops_data` extension attribute; the core module persists
+  crops.
+- Endpoints `responsivecrop/save`, `responsivecrop/generate`, `responsivecrop/uploadCompressed`,
+  `responsivecrop/upload`, `responsivecrop/uploadBreakpointImage`.
+- Events `hryvinskyi_slider_data_object_populate_before` / `_after`: add a slider form mapper instead.
+- JavaScript: `js/service/crop-ajax-service.js`, `cropper-manager.js`, `file-utils.js`, `image-compressor.js`,
+  `js/config/responsive-cropper-config.js`, the unused crop editor functions and the global RequireJS aliases
+  (`cropperjs`, `imageCompressor`, `cropperConfig`, `cropAjaxService`, `cropperManager`, `fileUtils`,
+  `responsiveCropper`); modules are required by their full path. The crop auto-save is gone: crops are saved with
+  the banner.
+- `Api/DataProvider/*`, `Api/ResponsiveCropsSaverInterface`, `Model/DataProvider/*`, `Model/Source/*`,
+  `Ui/Listing/DataProvider/*` and the dependency on `hryvinskyi/magento2-media-uploader` and `Magento_Cms`.
+
 ## [1.0.6] - 2026-02-05
 
 ### Fix
 - Fix PHP8.1 compatibility
 
-- ## [1.0.5] - 2026-02-02
+## [1.0.5] - 2026-02-02
 
 ### Added
 - Custom CSS field for sliders using CodeMirror editor in new "Custom Styles" fieldset

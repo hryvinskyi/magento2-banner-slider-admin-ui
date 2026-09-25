@@ -13,6 +13,9 @@
                 ko-value="value"
                 event="change: userChanges"
                 hasFocus="focused">
+            <if args="caption()">
+                <option value="" text="caption()"></option>
+            </if>
             <each args="data: options, as: 'option'">
                 <if args="Array.isArray(option.value)">
                     <optgroup attr="label: option.label" foreach="element: option.value, as: 'subOption'">

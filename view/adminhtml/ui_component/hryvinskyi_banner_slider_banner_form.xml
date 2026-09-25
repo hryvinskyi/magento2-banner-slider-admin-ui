@@ -1,8 +1,11 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!--
-  ~ Copyright (c) 2025. Volodymyr Hryvinskyi. All rights reserved.
-  ~ @author: <mailto:volodymyr@hryvinskyi.com>
-  -->
+/**
+ * Copyright (c) 2026. Volodymyr Hryvinskyi. All rights reserved.
+ * Author: Volodymyr Hryvinskyi <volodymyr@hryvinskyi.com>
+ * GitHub: https://github.com/hryvinskyi
+ */
+-->
 <form xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
       xsi:noNamespaceSchemaLocation="urn:magento:module:Magento_Ui:etc/ui_configuration.xsd">
     <argument name="data" xsi:type="array">
@@ -16,8 +19,8 @@
         <buttons>
             <button name="back" class="Hryvinskyi\BannerSliderAdminUi\Block\Adminhtml\Banner\Edit\BackButton"/>
             <button name="delete" class="Hryvinskyi\BannerSliderAdminUi\Block\Adminhtml\Banner\Edit\DeleteButton"/>
-            <button name="save_and_generate_and_continue" class="Hryvinskyi\BannerSliderAdminUi\Block\Adminhtml\Banner\Edit\SaveAndContinueButton"/>
-            <button name="save_and_generate" class="Hryvinskyi\BannerSliderAdminUi\Block\Adminhtml\Banner\Edit\SaveButton"/>
+            <button name="save_banner_and_continue" class="Hryvinskyi\BannerSliderAdminUi\Block\Adminhtml\Banner\Edit\SaveAndContinueButton"/>
+            <button name="save_banner" class="Hryvinskyi\BannerSliderAdminUi\Block\Adminhtml\Banner\Edit\SaveButton"/>
         </buttons>
         <namespace>hryvinskyi_banner_slider_banner_form</namespace>
         <dataScope>data</dataScope>
@@ -101,7 +104,8 @@
             <formElements>
                 <select>
                     <settings>
-                        <options class="Hryvinskyi\BannerSliderAdminUi\Model\Source\Slider"/>
+                        <options class="Hryvinskyi\BannerSlider\Model\Source\SliderOptions"/>
+                        <caption translate="true">-- Please Select --</caption>
                     </settings>
                 </select>
             </formElements>
@@ -114,7 +118,7 @@
             <formElements>
                 <select>
                     <settings>
-                        <options class="Hryvinskyi\BannerSliderAdminUi\Model\Source\BannerType"/>
+                        <options class="Hryvinskyi\BannerSlider\Model\Source\BannerTypeOptions"/>
                     </settings>
                 </select>
             </formElements>
@@ -131,18 +135,37 @@
                 </validation>
                 <dataType>number</dataType>
                 <label translate="true">Position</label>
+                <notice translate="true">Banners are shown in ascending position.</notice>
             </settings>
         </field>
         <field name="from_date" formElement="date">
+            <argument name="data" xsi:type="array">
+                <item name="config" xsi:type="array">
+                    <item name="options" xsi:type="array">
+                        <item name="timeFormat" xsi:type="string">HH:mm</item>
+                        <item name="showsTime" xsi:type="boolean">true</item>
+                    </item>
+                </item>
+            </argument>
             <settings>
-                <dataType>string</dataType>
-                <label translate="true">From Date</label>
+                <dataType>text</dataType>
+                <label translate="true">From</label>
+                <notice translate="true">In the store's time zone. Leave empty to show the banner from now on.</notice>
             </settings>
         </field>
         <field name="to_date" formElement="date">
+            <argument name="data" xsi:type="array">
+                <item name="config" xsi:type="array">
+                    <item name="options" xsi:type="array">
+                        <item name="timeFormat" xsi:type="string">HH:mm</item>
+                        <item name="showsTime" xsi:type="boolean">true</item>
+                    </item>
+                </item>
+            </argument>
             <settings>
-                <dataType>string</dataType>
-                <label translate="true">To Date</label>
+                <dataType>text</dataType>
+                <label translate="true">To</label>
+                <notice translate="true">In the store's time zone. Leave empty to show the banner without an end.</notice>
             </settings>
         </field>
     </fieldset>
@@ -152,16 +175,20 @@
             <collapsible>true</collapsible>
         </settings>
         <field name="image" formElement="imageUploader">
+            <argument name="data" xsi:type="array">
+                <item name="config" xsi:type="array">
+                    <!-- Upload only: a media gallery pick has no stored path the banner could keep -->
+                    <item name="template" xsi:type="string">Hryvinskyi_BannerSliderAdminUi/form/element/uploader/upload-only</item>
+                </item>
+            </argument>
             <settings>
-                <label translate="true">Desktop Image</label>
+                <label translate="true">Image</label>
                 <componentType>imageUploader</componentType>
-                <notice translate="true">This image serves as the default source for all responsive breakpoints. You can upload different images for specific breakpoints below.</notice>
             </settings>
             <formElements>
                 <imageUploader>
                     <settings>
-                        <allowedExtensions>jpg jpeg png gif webp</allowedExtensions>
-                        <maxFileSize>10485760</maxFileSize>
+                        <allowedExtensions>jpg jpeg png gif webp avif</allowedExtensions>
                         <uploaderConfig>
                             <param xsi:type="url" name="url" path="banner_slider/image/upload"/>
                         </uploaderConfig>
@@ -215,92 +242,18 @@
         </settings>
         <field name="video_url" formElement="input">
             <settings>
+                <validation>
+                    <rule name="validate-url" xsi:type="boolean">true</rule>
+                </validation>
                 <dataType>text</dataType>
                 <label translate="true">Video URL</label>
-                <notice translate="true">YouTube or Vimeo URL</notice>
+                <notice translate="true">YouTube or Vimeo URL, starting with http:// or https://</notice>
             </settings>
         </field>
         <field name="video_aspect_ratio" formElement="select">
             <argument name="data" xsi:type="array">
                 <item name="config" xsi:type="array">
                     <item name="default" xsi:type="string">16:9</item>
-                    <item name="switcherConfig" xsi:type="array">
-                        <item name="enabled" xsi:type="boolean">true</item>
-                        <item name="rules" xsi:type="array">
-                            <item name="0" xsi:type="array">
-                                <item name="value" xsi:type="string">custom</item>
-                                <item name="actions" xsi:type="array">
-                                    <item name="0" xsi:type="array">
-                                        <item name="target" xsi:type="string">hryvinskyi_banner_slider_banner_form.hryvinskyi_banner_slider_banner_form.video_settings.video_custom_aspect_ratio</item>
-                                        <item name="callback" xsi:type="string">visible</item>
-                                        <item name="params" xsi:type="array">
-                                            <item name="0" xsi:type="boolean">true</item>
-                                        </item>
-                                    </item>
-                                </item>
-                            </item>
-                            <item name="1" xsi:type="array">
-                                <item name="value" xsi:type="string">16:9</item>
-                                <item name="actions" xsi:type="array">
-                                    <item name="0" xsi:type="array">
-                                        <item name="target" xsi:type="string">hryvinskyi_banner_slider_banner_form.hryvinskyi_banner_slider_banner_form.video_settings.video_custom_aspect_ratio</item>
-                                        <item name="callback" xsi:type="string">visible</item>
-                                        <item name="params" xsi:type="array">
-                                            <item name="0" xsi:type="boolean">false</item>
-                                        </item>
-                                    </item>
-                                </item>
-                            </item>
-                            <item name="2" xsi:type="array">
-                                <item name="value" xsi:type="string">4:3</item>
-                                <item name="actions" xsi:type="array">
-                                    <item name="0" xsi:type="array">
-                                        <item name="target" xsi:type="string">hryvinskyi_banner_slider_banner_form.hryvinskyi_banner_slider_banner_form.video_settings.video_custom_aspect_ratio</item>
-                                        <item name="callback" xsi:type="string">visible</item>
-                                        <item name="params" xsi:type="array">
-                                            <item name="0" xsi:type="boolean">false</item>
-                                        </item>
-                                    </item>
-                                </item>
-                            </item>
-                            <item name="3" xsi:type="array">
-                                <item name="value" xsi:type="string">21:9</item>
-                                <item name="actions" xsi:type="array">
-                                    <item name="0" xsi:type="array">
-                                        <item name="target" xsi:type="string">hryvinskyi_banner_slider_banner_form.hryvinskyi_banner_slider_banner_form.video_settings.video_custom_aspect_ratio</item>
-                                        <item name="callback" xsi:type="string">visible</item>
-                                        <item name="params" xsi:type="array">
-                                            <item name="0" xsi:type="boolean">false</item>
-                                        </item>
-                                    </item>
-                                </item>
-                            </item>
-                            <item name="4" xsi:type="array">
-                                <item name="value" xsi:type="string">1:1</item>
-                                <item name="actions" xsi:type="array">
-                                    <item name="0" xsi:type="array">
-                                        <item name="target" xsi:type="string">hryvinskyi_banner_slider_banner_form.hryvinskyi_banner_slider_banner_form.video_settings.video_custom_aspect_ratio</item>
-                                        <item name="callback" xsi:type="string">visible</item>
-                                        <item name="params" xsi:type="array">
-                                            <item name="0" xsi:type="boolean">false</item>
-                                        </item>
-                                    </item>
-                                </item>
-                            </item>
-                            <item name="5" xsi:type="array">
-                                <item name="value" xsi:type="string">9:16</item>
-                                <item name="actions" xsi:type="array">
-                                    <item name="0" xsi:type="array">
-                                        <item name="target" xsi:type="string">hryvinskyi_banner_slider_banner_form.hryvinskyi_banner_slider_banner_form.video_settings.video_custom_aspect_ratio</item>
-                                        <item name="callback" xsi:type="string">visible</item>
-                                        <item name="params" xsi:type="array">
-                                            <item name="0" xsi:type="boolean">false</item>
-                                        </item>
-                                    </item>
-                                </item>
-                            </item>
-                        </item>
-                    </item>
                 </item>
             </argument>
             <settings>
@@ -310,7 +263,7 @@
             <formElements>
                 <select>
                     <settings>
-                        <options class="Hryvinskyi\BannerSliderAdminUi\Model\Source\AspectRatio"/>
+                        <options class="Hryvinskyi\BannerSliderAdminUi\Ui\Component\Form\VideoAspectRatioOptions"/>
                     </settings>
                 </select>
             </formElements>
@@ -319,15 +272,19 @@
             <argument name="data" xsi:type="array">
                 <item name="config" xsi:type="array">
                     <item name="component" xsi:type="string">Hryvinskyi_BannerSliderAdminUi/js/form/element/aspect-ratio-input</item>
+                    <item name="customChoice" xsi:type="string">custom</item>
+                    <item name="imports" xsi:type="array">
+                        <item name="aspectRatioChoice" xsi:type="string">${ $.parentName }.video_aspect_ratio:value</item>
+                    </item>
                 </item>
             </argument>
             <settings>
                 <visible>false</visible>
                 <dataType>text</dataType>
                 <label translate="true">Custom Aspect Ratio</label>
-                <notice translate="true">Enter aspect ratio in format width:height (e.g., 3:2, 16:10, 2.35:1)</notice>
+                <notice translate="true">Width:height in whole numbers from 1 to 100, for example 3:2 or 16:10.</notice>
                 <validation>
-                    <rule name="validate-aspect-ratio" xsi:type="boolean">true</rule>
+                    <rule name="validate-hbs-aspect-ratio" xsi:type="boolean">true</rule>
                 </validation>
             </settings>
         </field>
@@ -335,18 +292,18 @@
             <argument name="data" xsi:type="array">
                 <item name="config" xsi:type="array">
                     <item name="component" xsi:type="string">Hryvinskyi_BannerSliderAdminUi/js/form/element/video-uploader</item>
+                    <!-- Upload only: a media gallery pick has no stored path the banner could keep -->
+                    <item name="template" xsi:type="string">Hryvinskyi_BannerSliderAdminUi/form/element/uploader/upload-only</item>
                 </item>
             </argument>
             <settings>
                 <label translate="true">Local Video File</label>
                 <componentType>imageUploader</componentType>
-                <notice translate="true">Upload MP4 or WebM video file. Maximum file size: 100 MB.</notice>
             </settings>
             <formElements>
                 <imageUploader>
                     <settings>
-                        <allowedExtensions>mp4 webm</allowedExtensions>
-                        <maxFileSize>104857600</maxFileSize>
+                        <allowedExtensions>mp4 m4v webm</allowedExtensions>
                         <uploaderConfig>
                             <param xsi:type="url" name="url" path="banner_slider/video/upload"/>
                         </uploaderConfig>
@@ -385,8 +342,12 @@
         </settings>
         <field name="link_url" formElement="input">
             <settings>
+                <validation>
+                    <rule name="validate-hbs-link-url" xsi:type="boolean">true</rule>
+                </validation>
                 <dataType>text</dataType>
                 <label translate="true">Link URL</label>
+                <notice translate="true">A full http(s) URL, mailto: or tel: link, or a relative URL such as /sale.html.</notice>
             </settings>
         </field>
         <field name="open_in_new_tab" formElement="checkbox">

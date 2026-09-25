@@ -1,63 +1,60 @@
 <?php
 /**
- * Copyright (c) 2021. MageCloud.  All rights reserved.
- * @author: Volodymyr Hryvinskyi <mailto:volodymyr@hryvinskyi.com>
+ * Copyright (c) 2026. Volodymyr Hryvinskyi. All rights reserved.
+ * Author: Volodymyr Hryvinskyi <volodymyr@hryvinskyi.com>
+ * GitHub: https://github.com/hryvinskyi
  */
 
 declare(strict_types=1);
 
 namespace Hryvinskyi\BannerSliderAdminUi\Controller\Adminhtml\Image;
 
-use Hryvinskyi\BannerSliderApi\Api\UploadImageInterface;
+use Hryvinskyi\BannerSliderAdminUi\Model\Upload\MediaUploadHandler;
+use Hryvinskyi\BannerSliderApi\Api\Media\ImageUploadInterface;
 use Magento\Backend\App\Action;
 use Magento\Backend\App\Action\Context;
 use Magento\Framework\App\Action\HttpPostActionInterface;
-use Magento\Framework\Controller\ResultFactory;
+use Magento\Framework\Controller\Result\JsonFactory;
 use Magento\Framework\Controller\ResultInterface;
-use Magento\Framework\Exception\LocalizedException;
 
+/**
+ * Stores the banner image picked in the form's image uploader and answers the uploader JSON.
+ *
+ * The file field is named by the uploader's `param_name` (`image` by default).
+ */
 class Upload extends Action implements HttpPostActionInterface
 {
+    public const ADMIN_RESOURCE = 'Hryvinskyi_BannerSlider::banner_save';
+    private const DEFAULT_FIELD = 'image';
+
     /**
-     * Upload constructor.
-     *
      * @param Context $context
-     * @param UploadImageInterface $uploadImage
+     * @param JsonFactory $jsonFactory
+     * @param MediaUploadHandler $uploadHandler
+     * @param ImageUploadInterface $imageUpload
      */
     public function __construct(
         Context $context,
-        private readonly UploadImageInterface $uploadImage
+        private readonly JsonFactory $jsonFactory,
+        private readonly MediaUploadHandler $uploadHandler,
+        private readonly ImageUploadInterface $imageUpload
     ) {
         parent::__construct($context);
     }
 
     /**
-     * Check admin permissions for this controller
-     * @return bool
-     * @noinspection PhpMissingReturnTypeInspection
-     * @noinspection ReturnTypeCanBeDeclaredInspection
-     */
-    #[\Override]
-    protected function _isAllowed()
-    {
-        return $this->_authorization->isAllowed('MageCloud_BannerSlider::image_save');
-    }
-
-    /**
-     * Upload file controller action
+     * Store the uploaded image
+     *
      * @return ResultInterface
      */
-    #[\Override]
     public function execute(): ResultInterface
     {
-        $imageId = $this->_request->getParam('param_name', 'image');
+        $field = $this->getRequest()->getParam('param_name');
 
-        try {
-            $result = $this->uploadImage->execute($imageId);
-        } catch (LocalizedException $e) {
-            $result = ['error' => $e->getMessage(), 'errorcode' => $e->getCode()];
-        }
-
-        return $this->resultFactory->create(ResultFactory::TYPE_JSON)->setData($result);
+        return $this->jsonFactory->create()->setData($this->uploadHandler->handle(
+            $this->getRequest(),
+            is_string($field) && $field !== '' ? $field : self::DEFAULT_FIELD,
+            $this->imageUpload->upload(...)
+        ));
     }
 }

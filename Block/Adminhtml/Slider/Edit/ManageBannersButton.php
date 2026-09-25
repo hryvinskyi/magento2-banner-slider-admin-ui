@@ -9,40 +9,31 @@ declare(strict_types=1);
 
 namespace Hryvinskyi\BannerSliderAdminUi\Block\Adminhtml\Slider\Edit;
 
-use Magento\Framework\View\Element\UiComponent\Control\ButtonProviderInterface;
+use Hryvinskyi\BannerSliderAdminUi\Block\Adminhtml\GenericButton;
 
 /**
- * Manage Banners button for banner form
+ * "Manage Banners" on the form of a stored slider, for admins allowed to see banners: opens the slider's banner
+ * grid.
  */
-class ManageBannersButton extends GenericButton implements ButtonProviderInterface
+class ManageBannersButton extends GenericButton
 {
     /**
-     * @inheritDoc
+     * Button data; none when the button does not apply
+     *
+     * @return array<string, mixed>
      */
     public function getButtonData(): array
     {
-        return [
-            'label' => __('Manage Banners'),
-            'on_click' => sprintf("location.href = '%s';", $this->getManageBannersUrl()),
-            'class' => 'secondary',
-            'sort_order' => 15,
-        ];
-    }
-
-    /**
-     * Get URL for manage banners button
-     *
-     * @return string
-     */
-    private function getManageBannersUrl(): string
-    {
-        $params = [];
-        $sliderId = $this->getSliderId();
-
-        if ($sliderId) {
-            $params['slider_id'] = $sliderId;
+        $sliderId = $this->getRequestedId('slider_id');
+        if ($sliderId === null || !$this->isAllowed('Hryvinskyi_BannerSlider::banner')) {
+            return [];
         }
 
-        return $this->getUrl('banner_slider/banner/index', $params);
+        return $this->linkButton(
+            __('Manage Banners'),
+            $this->getUrl('banner_slider/banner/index', ['slider_id' => $sliderId]),
+            'secondary',
+            15
+        );
     }
 }

@@ -10,15 +10,18 @@ declare(strict_types=1);
 namespace Hryvinskyi\BannerSliderAdminUi\Ui\Listing\Column;
 
 use Hryvinskyi\BannerSliderApi\Api\Data\BannerInterface;
+use Hryvinskyi\BannerSliderApi\Api\Media\MediaUrlResolverInterface;
+use Hryvinskyi\BannerSliderApi\Api\Value\BannerType;
+use Magento\Framework\Exception\LocalizedException;
 use Magento\Framework\UrlInterface;
 use Magento\Framework\View\Asset\Repository as AssetRepository;
 use Magento\Framework\View\Element\UiComponent\ContextInterface;
 use Magento\Framework\View\Element\UiComponentFactory;
-use Magento\Store\Model\StoreManagerInterface;
 use Magento\Ui\Component\Listing\Columns\Column;
 
 /**
- * Thumbnail column for banner listing
+ * Banner grid thumbnail: the banner image, a video placeholder for video banners, or an image placeholder when there
+ * is no image (or its path cannot be turned into a URL).
  */
 class Thumbnail extends Column
 {
@@ -29,16 +32,16 @@ class Thumbnail extends Column
     /**
      * @param ContextInterface $context
      * @param UiComponentFactory $uiComponentFactory
-     * @param StoreManagerInterface $storeManager
+     * @param MediaUrlResolverInterface $mediaUrlResolver
      * @param UrlInterface $urlBuilder
      * @param AssetRepository $assetRepository
-     * @param array $components
-     * @param array $data
+     * @param array<mixed> $components
+     * @param array<mixed> $data
      */
     public function __construct(
         ContextInterface $context,
         UiComponentFactory $uiComponentFactory,
-        private readonly StoreManagerInterface $storeManager,
+        private readonly MediaUrlResolverInterface $mediaUrlResolver,
         private readonly UrlInterface $urlBuilder,
         private readonly AssetRepository $assetRepository,
         array $components = [],
@@ -48,56 +51,66 @@ class Thumbnail extends Column
     }
 
     /**
-     * @inheritDoc
+     * Add the thumbnail source, alternative text and edit link to every row
+     *
+     * @param array<mixed> $dataSource
+     * @return array<mixed>
      */
     public function prepareDataSource(array $dataSource): array
     {
-        if (!isset($dataSource['data']['items'])) {
+        $data = $dataSource['data'] ?? null;
+        $items = is_array($data) ? $data['items'] ?? null : null;
+        $fieldName = $this->getData('name');
+        if (!is_array($data) || !is_array($items) || !is_string($fieldName)) {
             return $dataSource;
         }
 
-        $fieldName = $this->getData('name');
-        $mediaUrl = $this->storeManager->getStore()->getBaseUrl(UrlInterface::URL_TYPE_MEDIA);
-
-        foreach ($dataSource['data']['items'] as &$item) {
-            $altField = $this->getData('config/altField') ?: self::ALT_FIELD;
+        $altField = $this->getData('config/altField');
+        $altField = is_string($altField) && $altField !== '' ? $altField : self::ALT_FIELD;
+        foreach ($items as $index => $item) {
+            if (!is_array($item)) {
+                continue;
+            }
+            $source = $this->source($item, $fieldName);
             $alt = $item[$altField] ?? '';
-            $editLink = $this->urlBuilder->getUrl(
+            $item[$fieldName . '_src'] = $source;
+            $item[$fieldName . '_orig_src'] = $source;
+            $item[$fieldName . '_alt'] = is_string($alt) ? $alt : '';
+            $item[$fieldName . '_link'] = $this->urlBuilder->getUrl(
                 'banner_slider/banner/edit',
-                ['banner_id' => $item['banner_id']]
+                ['banner_id' => $item[BannerInterface::BANNER_ID] ?? null]
             );
-
-            $imageUrl = $this->resolveImageUrl($item, $fieldName, $mediaUrl);
-
-            $item[$fieldName . '_src'] = $imageUrl;
-            $item[$fieldName . '_alt'] = $alt;
-            $item[$fieldName . '_link'] = $editLink;
-            $item[$fieldName . '_orig_src'] = $imageUrl;
+            $items[$index] = $item;
         }
+        $data['items'] = $items;
+        $dataSource['data'] = $data;
 
         return $dataSource;
     }
 
     /**
-     * Resolves the image URL based on banner type and image availability.
+     * The thumbnail URL of one row
      *
-     * @param array<string, mixed> $item
+     * @param array<mixed> $item
      * @param string $fieldName
-     * @param string $mediaUrl
      * @return string
      */
-    private function resolveImageUrl(array $item, string $fieldName, string $mediaUrl): string
+    private function source(array $item, string $fieldName): string
     {
-        $bannerType = (int)($item['type'] ?? BannerInterface::TYPE_IMAGE);
-
-        if ($bannerType === BannerInterface::TYPE_VIDEO) {
+        $type = $item[BannerInterface::TYPE] ?? null;
+        if (is_numeric($type) && BannerType::tryFrom((int)$type) === BannerType::VIDEO) {
             return $this->assetRepository->getUrl(self::PLACEHOLDER_VIDEO);
         }
 
-        if (empty($item[$fieldName])) {
-            return $this->assetRepository->getUrl(self::PLACEHOLDER_IMAGE);
+        $path = $item[$fieldName] ?? null;
+        if (is_string($path) && $path !== '') {
+            try {
+                return $this->mediaUrlResolver->getUrl($path);
+            } catch (\InvalidArgumentException | LocalizedException) {
+                return $this->assetRepository->getUrl(self::PLACEHOLDER_IMAGE);
+            }
         }
 
-        return $mediaUrl . $item[$fieldName];
+        return $this->assetRepository->getUrl(self::PLACEHOLDER_IMAGE);
     }
 }

@@ -9,15 +9,16 @@ declare(strict_types=1);
 
 namespace Hryvinskyi\BannerSliderAdminUi\Controller\Adminhtml\Slider;
 
+use Hryvinskyi\BannerSliderAdminUi\Model\Request\EntityIdReader;
 use Hryvinskyi\BannerSliderApi\Api\SliderRepositoryInterface;
 use Magento\Backend\App\Action;
 use Magento\Backend\App\Action\Context;
 use Magento\Framework\App\Action\HttpPostActionInterface;
-use Magento\Framework\Controller\Result\Redirect;
+use Magento\Framework\Controller\ResultInterface;
 use Magento\Framework\Exception\LocalizedException;
 
 /**
- * Delete slider controller
+ * Deletes one slider with its banners and breakpoints, then returns to the slider grid.
  */
 class Delete extends Action implements HttpPostActionInterface
 {
@@ -26,38 +27,43 @@ class Delete extends Action implements HttpPostActionInterface
     /**
      * @param Context $context
      * @param SliderRepositoryInterface $sliderRepository
+     * @param EntityIdReader $idReader
      */
     public function __construct(
         Context $context,
-        private readonly SliderRepositoryInterface $sliderRepository
+        private readonly SliderRepositoryInterface $sliderRepository,
+        private readonly EntityIdReader $idReader
     ) {
         parent::__construct($context);
     }
 
     /**
-     * Execute action
+     * Delete the slider named by `slider_id`
      *
-     * @return Redirect
+     * @return ResultInterface
      */
-    public function execute(): Redirect
+    public function execute(): ResultInterface
     {
-        $resultRedirect = $this->resultRedirectFactory->create();
-        $sliderId = (int)$this->getRequest()->getParam('slider_id');
+        $redirect = $this->resultRedirectFactory->create()->setPath('*/*/');
+        $sliderId = $this->idReader->read($this->getRequest(), 'slider_id');
+        if ($sliderId === null) {
+            $this->messageManager->addErrorMessage(__('Choose a slider to delete.'));
 
-        if (!$sliderId) {
-            $this->messageManager->addErrorMessage(__('Slider ID is required.'));
-            return $resultRedirect->setPath('*/*/');
+            return $redirect;
         }
 
         try {
             $this->sliderRepository->deleteById($sliderId);
-            $this->messageManager->addSuccessMessage(__('Slider has been deleted.'));
-        } catch (LocalizedException $e) {
-            $this->messageManager->addErrorMessage($e->getMessage());
-        } catch (\Exception $e) {
-            $this->messageManager->addExceptionMessage($e, __('Something went wrong while deleting the slider.'));
+            $this->messageManager->addSuccessMessage(__('The slider has been deleted.'));
+        } catch (LocalizedException $exception) {
+            $this->messageManager->addErrorMessage($exception->getMessage());
+        } catch (\Exception $exception) {
+            $this->messageManager->addExceptionMessage(
+                $exception,
+                __('Something went wrong while deleting the slider.')
+            );
         }
 
-        return $resultRedirect->setPath('*/*/');
+        return $redirect;
     }
 }

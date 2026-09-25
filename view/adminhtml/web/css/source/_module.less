@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2025-2026. Volodymyr Hryvinskyi. All rights reserved.
+ * Copyright (c) 2026. Volodymyr Hryvinskyi. All rights reserved.
  * Author: Volodymyr Hryvinskyi <volodymyr@hryvinskyi.com>
  * GitHub: https://github.com/hryvinskyi
  */
@@ -19,10 +19,6 @@
 .responsive-cropper-container {
     position: relative;
 
-    .loading-mask .loader {
-        background-color: transparent;
-    }
-
     .compression-overlay {
         position: absolute;
         top: 0;
@@ -36,75 +32,42 @@
         justify-content: center;
 
         .compression-progress-container {
-            width: 400px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
             max-width: 90%;
-            padding: 30px;
+            padding: 20px 30px;
             background: @color-white;
             border-radius: 4px;
             box-shadow: 0 3px 9px rgba(0, 0, 0, 0.15);
-            text-align: center;
-
-            .compression-progress-header {
-                font-size: 18px;
-                font-weight: 600;
-                color: @color-gray-dark;
-                margin-bottom: 20px;
-            }
-
-            .compression-progress-bar-wrapper {
-                width: 100%;
-                height: 8px;
-                background: @color-gray-light;
-                border-radius: 4px;
-                overflow: hidden;
-                margin-bottom: 15px;
-
-                .compression-progress-bar {
-                    height: 100%;
-                    background: @color-blue;
-                    border-radius: 4px;
-                    transition: width 0.3s ease;
-                }
-            }
-
-            .compression-progress-info {
-                display: flex;
-                justify-content: space-between;
-                align-items: center;
-                font-size: 14px;
-
-                .compression-percentage {
-                    font-weight: 600;
-                    color: @color-blue;
-                    font-size: 16px;
-                }
-
-                .compression-message {
-                    color: @color-gray;
-                    font-style: italic;
-                }
-            }
+            color: @color-gray-dark;
+            font-size: 14px;
         }
     }
 
-    .wasm-warning {
-        padding: 12px 15px;
-        background: @color-warning;
-        border: 1px solid darken(@color-warning, 15%);
-        border-radius: 3px;
-        color: @color-gray-dark;
-        margin-bottom: 20px;
-        display: flex;
-        align-items: center;
-        gap: 10px;
-        font-size: 13px;
+    .spinner {
+        display: inline-block;
+        width: 16px;
+        height: 16px;
+        border: 2px solid @color-gray-light;
+        border-top-color: @color-blue;
+        border-radius: 50%;
+        animation: hbs-crop-spin 0.8s linear infinite;
+    }
 
-        &::before {
-            &:extend(.abs-icon all);
-            content: '\e61d'; // warning icon
-            font-size: 18px;
-            color: @color-primary;
+    @keyframes hbs-crop-spin {
+        to {
+            transform: rotate(360deg);
         }
+    }
+
+    .tab-changed {
+        display: inline-block;
+        width: 8px;
+        height: 8px;
+        margin-left: 6px;
+        border-radius: 50%;
+        background: @color-primary;
     }
 
     // =============================================
@@ -552,30 +515,6 @@
     // =============================================
     // Image Comparison Section
     // =============================================
-    .image-comparison-toggle {
-        margin: 15px 0;
-        padding: 12px 15px;
-        background: lighten(@color-blue, 48%);
-        border: 1px solid lighten(@color-blue, 35%);
-        border-radius: 3px;
-
-        .comparison-checkbox-label {
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            cursor: pointer;
-            font-weight: 600;
-            color: @color-blue;
-            font-size: 13px;
-
-            input[type="checkbox"] {
-                width: 16px;
-                height: 16px;
-                cursor: pointer;
-            }
-        }
-    }
-
     .image-comparison-section {
         margin-bottom: 20px;
         max-width: 1000px;
@@ -753,269 +692,80 @@
     }
 
     // =============================================
-    // Crop Actions
+    // Format notes, visibility toggle, actions
     // =============================================
+    .format-fallback,
+    .format-note,
+    .crop-save-hint {
+        color: @color-gray;
+        font-size: 12px;
+    }
+
+    .format-fallback {
+        margin: 0 0 10px;
+    }
+
+    .format-note {
+        display: inline-block;
+        margin-left: 24px;
+        font-style: italic;
+    }
+
+    .quality-label {
+        min-width: 90px;
+        color: @color-gray;
+        font-size: 12px;
+    }
+
+    .crop-enabled {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        margin-bottom: 20px;
+        font-weight: 600;
+        font-size: 13px;
+        cursor: pointer;
+    }
+
+    .file-picker {
+        position: relative;
+        cursor: pointer;
+
+        &:focus-within {
+            box-shadow: 0 0 0 1px @color-blue;
+        }
+    }
+
+    .file-picker-input {
+        position: absolute;
+        width: 1px;
+        height: 1px;
+        overflow: hidden;
+        clip: rect(0 0 0 0);
+        white-space: nowrap;
+        opacity: 0;
+    }
+
+    .crop-removal-notice {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 15px;
+        margin: 20px 0;
+    }
+
     .crop-actions {
         display: flex;
+        flex-wrap: wrap;
         gap: 10px;
         padding-top: 15px;
         border-top: 1px solid @color-gray-light;
         align-items: center;
         margin-top: 20px;
-        justify-content: space-between;
 
-        .action-primary {
-            background: @color-primary;
-            border: 1px solid darken(@color-primary, 5%);
-            color: @color-white;
-            padding: 10px 20px;
-            border-radius: 3px;
-            font-weight: 600;
-            font-size: 13px;
-            cursor: pointer;
-            transition: all 0.15s ease;
-
-            &:hover {
-                background: darken(@color-primary, 8%);
-                border-color: darken(@color-primary, 12%);
-            }
-
-            &:active {
-                background: darken(@color-primary, 12%);
-            }
-        }
-
-        .saving-indicator {
-            display: inline-flex;
-            align-items: center;
-            gap: 8px;
-            padding: 7px 14px;
-            background: @color-gray-lighter;
-            border: 1px solid @color-gray-light;
-            border-radius: 15px;
-            color: @color-gray;
-            font-size: 12px;
-            font-weight: 500;
-
-            .spinner {
-                width: 12px;
-                height: 12px;
-                border: 2px solid @color-gray-light;
-                border-top-color: @color-blue;
-                border-radius: 50%;
-                animation: spin 0.8s linear infinite;
-            }
-        }
-
-        @keyframes spin {
-            to {
-                transform: rotate(360deg);
-            }
-        }
-
-        .saved-indicator {
-            display: inline-flex;
-            align-items: center;
-            gap: 6px;
-            padding: 7px 14px;
-            background: lighten(@color-green, 45%);
-            border: 1px solid lighten(@color-green, 30%);
-            border-radius: 15px;
-            color: @color-green;
-            font-size: 12px;
-            font-weight: 600;
-            animation: fadeInScale 0.3s ease-out;
-
-            &::before {
-                &:extend(.abs-icon all);
-                content: '\e62d'; // checkmark icon
-                font-size: 12px;
-            }
-
-            .autosave-tooltip {
-                position: relative;
-                display: inline-flex;
-                align-items: center;
-                width: 16px;
-                margin: 0;
-
-                .admin__field-tooltip-action {
-                    display: flex;
-                    align-items: center;
-                    justify-content: center;
-                    width: 16px;
-                    height: 16px;
-                    min-width: 16px;
-                    min-height: 16px;
-                    border: 1px solid @color-green;
-                    border-radius: 50%;
-                    background: transparent;
-                    cursor: pointer;
-                    text-decoration: none;
-                    box-sizing: border-box;
-                    padding: 0;
-                    margin: 0;
-
-                    &::before,
-                    &::after {
-                        all: unset;
-                    }
-
-                    &::before {
-                        content: '?';
-                        font-family: Arial, sans-serif;
-                        font-size: 10px;
-                        font-weight: 700;
-                        color: @color-green;
-                        line-height: 1;
-                    }
-
-                    &:hover,
-                    &:focus {
-                        background: @color-green;
-                        outline: none;
-
-                        &::before {
-                            color: #fff;
-                        }
-                    }
-                }
-
-                .admin__field-tooltip-content {
-                    display: none;
-                    position: absolute;
-                    bottom: calc(100% + 8px);
-                    left: 50%;
-                    transform: translateX(-50%);
-                    padding: 10px 12px;
-                    width: 260px;
-                    background: #333;
-                    border-radius: 4px;
-                    color: #fff;
-                    font-size: 12px;
-                    font-weight: 400;
-                    line-height: 1.4;
-                    text-align: center;
-                    white-space: normal;
-                    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.25);
-                    z-index: 1000;
-
-                    &::before,
-                    &::after {
-                        all: unset;
-                    }
-
-                    &::after {
-                        content: '';
-                        position: absolute;
-                        top: 100%;
-                        left: 50%;
-                        transform: translateX(-50%);
-                        border: 6px solid transparent;
-                        border-top-color: #333;
-                    }
-                }
-
-                &:hover .admin__field-tooltip-content,
-                .admin__field-tooltip-action:focus + .admin__field-tooltip-content {
-                    display: block;
-                }
-            }
-        }
-
-        @keyframes fadeInScale {
-            0% {
-                opacity: 0;
-                transform: scale(0.8);
-            }
-            100% {
-                opacity: 1;
-                transform: scale(1);
-            }
-        }
-    }
-
-    // =============================================
-    // Empty States
-    // =============================================
-    .no-breakpoint-message {
-        padding: 40px 30px;
-        text-align: center;
-        color: @color-gray;
-        background: @color-white;
-        border: 1px solid @color-gray-light;
-        border-top: none;
-
-        p {
+        .crop-save-hint {
+            flex-basis: 100%;
             margin: 0;
-            font-size: 13px;
-        }
-    }
-
-    // =============================================
-    // Generate All Section
-    // =============================================
-    .generate-all-section {
-        margin-top: 20px;
-        padding-top: 20px;
-        border-top: 1px solid @color-gray-light;
-        text-align: right;
-
-        .action-primary {
-            background: @color-green;
-            border: 1px solid darken(@color-green, 5%);
-            color: @color-white;
-            padding: 10px 24px;
-            border-radius: 3px;
-            font-weight: 600;
-            font-size: 13px;
-            cursor: pointer;
-            transition: all 0.15s ease;
-
-            &:hover {
-                background: darken(@color-green, 8%);
-                border-color: darken(@color-green, 12%);
-            }
-
-            &:active {
-                background: darken(@color-green, 12%);
-            }
-        }
-    }
-
-    // =============================================
-    // Upload Overlay
-    // =============================================
-    .upload-overlay {
-        position: absolute;
-        top: 0;
-        left: 0;
-        right: 0;
-        bottom: 0;
-        background: rgba(255, 255, 255, 0.95);
-        z-index: 101;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-
-        .upload-progress-container {
-            text-align: center;
-            padding: 25px;
-            background: @color-white;
-            border-radius: 3px;
-            box-shadow: 0 3px 9px rgba(0, 0, 0, 0.15);
-
-            .upload-progress-header {
-                font-size: 15px;
-                font-weight: 600;
-                color: @color-gray-dark;
-                margin-bottom: 15px;
-            }
-
-            .upload-spinner img {
-                width: 40px;
-                height: 40px;
-            }
         }
     }
 }
@@ -1035,40 +785,6 @@
         margin: 0;
         font-size: 13px;
         font-weight: 500;
-    }
-}
-
-// =============================================
-// Generated Images Preview
-// =============================================
-.generated-images {
-    margin-bottom: 20px;
-
-    .image-previews {
-        display: flex;
-        flex-wrap: wrap;
-        gap: 15px;
-
-        .preview-item {
-            text-align: center;
-
-            .format-label {
-                display: block;
-                margin-bottom: 6px;
-                font-weight: 600;
-                font-size: 11px;
-                text-transform: uppercase;
-                color: @color-gray;
-                letter-spacing: 0.5px;
-            }
-
-            img {
-                max-width: 200px;
-                max-height: 150px;
-                border: 1px solid @color-gray-light;
-                border-radius: 3px;
-            }
-        }
     }
 }
 

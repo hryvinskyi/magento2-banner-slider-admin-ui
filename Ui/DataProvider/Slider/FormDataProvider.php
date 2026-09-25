@@ -9,73 +9,79 @@ declare(strict_types=1);
 
 namespace Hryvinskyi\BannerSliderAdminUi\Ui\DataProvider\Slider;
 
-use Hryvinskyi\BannerSlider\Model\ResourceModel\Slider\CollectionFactory;
-use Hryvinskyi\BannerSliderAdminUi\Api\DataProvider\PrepareDataProcessorInterface;
+use Hryvinskyi\BannerSliderAdminUi\Api\Form\PostData;
+use Hryvinskyi\BannerSliderAdminUi\Model\Form\RefusedPostStore;
+use Hryvinskyi\BannerSliderAdminUi\Model\Form\SliderFormHydrator;
+use Hryvinskyi\BannerSliderAdminUi\Model\Request\EntityIdReader;
+use Hryvinskyi\BannerSliderAdminUi\Ui\DataProvider\AbstractEntityFormDataProvider;
 use Hryvinskyi\BannerSliderApi\Api\Data\SliderInterface;
-use Magento\Framework\App\Request\DataPersistorInterface;
-use Magento\Ui\DataProvider\AbstractDataProvider;
+use Hryvinskyi\BannerSliderApi\Api\Data\SliderInterfaceFactory;
+use Hryvinskyi\BannerSliderApi\Api\SliderRepositoryInterface;
+use Magento\Ui\DataProvider\Modifier\PoolInterface;
 
 /**
- * Slider form data provider
+ * Slider form data: the stored slider exported by the slider form hydrator; a new slider starts from the field
+ * defaults of the form. A refused save of the same slider is shown again through the hydrator.
  */
-class FormDataProvider extends AbstractDataProvider
+class FormDataProvider extends AbstractEntityFormDataProvider
 {
-    /**
-     * @var array|null
-     */
-    private ?array $loadedData = null;
-
     /**
      * @param string $name
      * @param string $primaryFieldName
      * @param string $requestFieldName
-     * @param CollectionFactory $collectionFactory
-     * @param DataPersistorInterface $dataPersistor
-     * @param PrepareDataProcessorInterface $prepareDataProcessor
-     * @param array $meta
-     * @param array $data
+     * @param RefusedPostStore $refusedPosts
+     * @param PoolInterface $pool
+     * @param EntityIdReader $idReader
+     * @param SliderRepositoryInterface $sliderRepository
+     * @param SliderInterfaceFactory $sliderFactory
+     * @param SliderFormHydrator $hydrator
+     * @param array<mixed> $meta
+     * @param array<mixed> $data
      */
     public function __construct(
         string $name,
         string $primaryFieldName,
         string $requestFieldName,
-        CollectionFactory $collectionFactory,
-        private readonly DataPersistorInterface $dataPersistor,
-        private readonly PrepareDataProcessorInterface $prepareDataProcessor,
+        RefusedPostStore $refusedPosts,
+        PoolInterface $pool,
+        EntityIdReader $idReader,
+        private readonly SliderRepositoryInterface $sliderRepository,
+        private readonly SliderInterfaceFactory $sliderFactory,
+        private readonly SliderFormHydrator $hydrator,
         array $meta = [],
         array $data = []
     ) {
-        $this->collection = $collectionFactory->create();
-        parent::__construct($name, $primaryFieldName, $requestFieldName, $meta, $data);
+        parent::__construct(
+            $name,
+            $primaryFieldName,
+            $requestFieldName,
+            $refusedPosts,
+            $pool,
+            $idReader,
+            'hryvinskyi_banner_slider_slider',
+            $meta,
+            $data
+        );
     }
 
     /**
      * @inheritDoc
      */
-    public function getData(): array
+    protected function record(int $entityId, ?PostData $refusedPost): array
     {
-        if ($this->loadedData !== null) {
-            return $this->loadedData;
-        }
+        $slider = $this->sliderRepository->getById($entityId);
+        $values = $refusedPost === null
+            ? $this->hydrator->export($slider)
+            : $this->hydrator->restore($refusedPost, $slider);
 
-        $this->loadedData = [];
-        $items = $this->collection->getItems();
+        return array_replace($values, [SliderInterface::SLIDER_ID => (string)$entityId]);
+    }
 
-        /** @var SliderInterface $slider */
-        foreach ($items as $slider) {
-            $sliderData = $slider->getData();
-            $this->prepareDataProcessor->execute($sliderData);
-            $this->loadedData[$slider->getSliderId()] = $sliderData;
-        }
-
-        $data = $this->dataPersistor->get('hryvinskyi_banner_slider_slider');
-        if (!empty($data)) {
-            $slider = $this->collection->getNewEmptyItem();
-            $slider->setData($data);
-            $this->loadedData[$slider->getSliderId()] = $slider->getData();
-            $this->dataPersistor->clear('hryvinskyi_banner_slider_slider');
-        }
-
-        return $this->loadedData;
+    /**
+     * @inheritDoc
+     */
+    protected function newRecord(?PostData $refusedPost): array
+    {
+        return $refusedPost === null ? [] : $this->hydrator->restore($refusedPost, $this->sliderFactory->create());
     }
 }

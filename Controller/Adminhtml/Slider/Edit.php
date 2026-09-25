@@ -9,16 +9,18 @@ declare(strict_types=1);
 
 namespace Hryvinskyi\BannerSliderAdminUi\Controller\Adminhtml\Slider;
 
+use Hryvinskyi\BannerSliderAdminUi\Model\Request\EntityIdReader;
 use Hryvinskyi\BannerSliderApi\Api\SliderRepositoryInterface;
 use Magento\Backend\App\Action;
 use Magento\Backend\App\Action\Context;
+use Magento\Backend\Model\View\Result\PageFactory;
 use Magento\Framework\App\Action\HttpGetActionInterface;
+use Magento\Framework\Controller\ResultInterface;
 use Magento\Framework\Exception\NoSuchEntityException;
-use Magento\Framework\View\Result\Page;
-use Magento\Framework\View\Result\PageFactory;
 
 /**
- * Edit slider controller
+ * The slider form page, for a new slider or a stored one; a slider that no longer exists sends the admin back to
+ * the grid with a message.
  */
 class Edit extends Action implements HttpGetActionInterface
 {
@@ -28,39 +30,41 @@ class Edit extends Action implements HttpGetActionInterface
      * @param Context $context
      * @param PageFactory $resultPageFactory
      * @param SliderRepositoryInterface $sliderRepository
+     * @param EntityIdReader $idReader
      */
     public function __construct(
         Context $context,
         private readonly PageFactory $resultPageFactory,
-        private readonly SliderRepositoryInterface $sliderRepository
+        private readonly SliderRepositoryInterface $sliderRepository,
+        private readonly EntityIdReader $idReader
     ) {
         parent::__construct($context);
     }
 
     /**
-     * Execute action
+     * Show the slider form
      *
-     * @return Page
+     * @return ResultInterface
      */
-    public function execute(): Page
+    public function execute(): ResultInterface
     {
-        $sliderId = (int)$this->getRequest()->getParam('slider_id');
+        $sliderId = $this->idReader->read($this->getRequest(), 'slider_id');
         $title = __('New Slider');
 
-        if ($sliderId) {
+        if ($sliderId !== null) {
             try {
-                $slider = $this->sliderRepository->getById($sliderId);
-                $title = __('Edit Slider: %1', $slider->getName());
-            } catch (NoSuchEntityException $e) {
+                $title = __('Edit Slider: %1', $this->sliderRepository->getById($sliderId)->getName());
+            } catch (NoSuchEntityException) {
                 $this->messageManager->addErrorMessage(__('This slider no longer exists.'));
+
                 return $this->resultRedirectFactory->create()->setPath('*/*/');
             }
         }
 
-        $resultPage = $this->resultPageFactory->create();
-        $resultPage->setActiveMenu('Hryvinskyi_BannerSlider::slider');
-        $resultPage->getConfig()->getTitle()->prepend($title);
+        $page = $this->resultPageFactory->create();
+        $page->setActiveMenu('Hryvinskyi_BannerSlider::slider');
+        $page->getConfig()->getTitle()->prepend($title->render());
 
-        return $resultPage;
+        return $page;
     }
 }

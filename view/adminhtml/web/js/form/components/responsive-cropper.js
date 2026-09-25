@@ -1,1851 +1,503 @@
-/*
- * Copyright (c) 2025-2026. Volodymyr Hryvinskyi. All rights reserved.
+/**
+ * Copyright (c) 2026. Volodymyr Hryvinskyi. All rights reserved.
  * Author: Volodymyr Hryvinskyi <volodymyr@hryvinskyi.com>
  * GitHub: https://github.com/hryvinskyi
  */
 
+/**
+ * The banner form's crop editor: one tab per breakpoint of the banner's slider, a crop box on the crop's source
+ * image, the extra formats and qualities, an in-browser preview, and the form's Save buttons.
+ *
+ * It wires the crop state (crop-editor-model) to the page. On save it posts, in `responsive_crops`, what
+ * crop-submission prepares from the changed crops. Every failure is shown to the admin; a failed encoding never
+ * blocks the save, the server generates what is missing.
+ */
 define([
-    'jquery',
     'uiComponent',
-    'uiRegistry',
     'ko',
     'mage/translate',
-    'imageCompressor',
-    'cropperConfig',
-    'cropAjaxService',
-    'cropperManager',
-    'fileUtils'
-], function ($, Component, registry, ko, $t, imageCompressor, config, ajaxService, CropperManager, fileUtils) {
+    'Hryvinskyi_BannerSliderAdminUi/js/cropper/crop-payload',
+    'Hryvinskyi_BannerSliderAdminUi/js/cropper/crop-editor-model',
+    'Hryvinskyi_BannerSliderAdminUi/js/cropper/crop-encoding',
+    'Hryvinskyi_BannerSliderAdminUi/js/cropper/crop-submission',
+    'Hryvinskyi_BannerSliderAdminUi/js/cropper/crop-canvas',
+    'Hryvinskyi_BannerSliderAdminUi/js/cropper/encoders',
+    'Hryvinskyi_BannerSliderAdminUi/js/cropper/cropper-adapter',
+    'Hryvinskyi_BannerSliderAdminUi/js/cropper/file-size',
+    'Hryvinskyi_BannerSliderAdminUi/js/form/components/crop-editor-view',
+    'Hryvinskyi_BannerSliderAdminUi/js/form/components/crop-editor-messages',
+    'Hryvinskyi_BannerSliderAdminUi/js/service/http-client'
+], function (
+    Component, ko, $t, payload, editorModel, cropEncoding, cropSubmission, cropCanvas, encoders, cropperAdapter,
+    fileSize, view, messages, httpClient
+) {
     'use strict';
 
     return Component.extend({
         defaults: {
             template: 'Hryvinskyi_BannerSliderAdminUi/form/responsive-cropper',
-            breakpoints: [],
-            bannerId: null,
-            sliderId: null,
-            crops: {},
-            activeBreakpoint: null,
-            cropperManager: null,
-            cropperInitialized: false,
-            isLoading: false,
-            isSaving: false,
-            isUploading: false,
-            saveUrl: '',
-            generateUrl: '',
-            uploadCompressedUrl: '',
-            uploadBreakpointImageUrl: '',
-            webpSupported: true,
-            avifSupported: true,
-            useBrowserCompression: true,
-            saveTimeout: null,
-            desktopImageField: 'hryvinskyi_banner_slider_banner_form.hryvinskyi_banner_slider_banner_form.image_settings.image',
-            breakpointImages: {},
+            allowedImageTypes: ['image/jpeg', 'image/png', 'image/gif', 'image/webp', 'image/avif'],
             imports: {
-                sliderIdValue: '${ $.provider }:data.slider_id',
-                bannerIdValue: '${ $.provider }:data.banner_id',
-                responsiveCropperData: '${ $.provider }:data.responsive_cropper'
+                cropperData: '${ $.provider }:data.responsive_cropper',
+                pendingCrops: '${ $.provider }:data.responsive_crops',
+                sliderId: '${ $.provider }:data.slider_id',
+                bannerImage: '${ $.provider }:data.image'
             },
             listens: {
-                sliderIdValue: 'onSliderChange',
-                responsiveCropperData: 'onResponsiveCropperDataChange'
+                sliderId: 'onSliderChange',
+                bannerImage: 'onBannerImageChange'
+            },
+            modules: {
+                form: '${ $.ns }.${ $.ns }',
+                source: '${ $.provider }'
             }
         },
 
         /**
-         * Initialize component
+         * @inheritdoc
          */
         initialize: function () {
             this._super();
-            this.initCropperManager();
-            this.subscribeToDesktopImage();
-            this.checkBrowserCompressionSupport();
+            this.settings = payload.parseConfig({
+                breakpointsUrl: this.breakpointsUrl,
+                imageUploadUrl: this.imageUploadUrl,
+                imageUploadField: this.imageUploadField,
+                formats: this.formats,
+                defaultFormats: this.defaultFormats,
+                defaultQuality: this.defaultQuality,
+                maxUploadBytes: this.maxUploadBytes,
+                maxPostBytes: this.maxPostBytes
+            });
+            this.model = editorModel.create(this.settings);
+            this.model.setBannerImage(this.bannerImage);
+            this.http = httpClient.forPage();
+            this.encoding = {loader: cropCanvas, registry: encoders.registry, toBase64: encoders.toBase64};
+            this.cropBox = null;
+            this.breakpointsRequest = 0;
+            this.loadedSliderId = payload.stateSliderId(this.cropperData, this.sliderId);
+            this.showStates(this.cropperData ? this.cropperData.breakpoints : [], true);
+            encoders.registry.availability(this.settings.formats.map(function (format) {
+                return format.code;
+            })).then(this.browserFormats);
+            this.ready = true;
+            this.onSliderChange(this.sliderId);
+
             return this;
         },
 
         /**
-         * Initialize the cropper manager instance
-         */
-        initCropperManager: function () {
-            var self = this;
-
-            this.cropperManager = CropperManager({
-                onReady: function () {
-                    self.cropperInitialized(true);
-                },
-                onCrop: function (detail) {
-                    var breakpoint = self.activeBreakpoint();
-                    if (breakpoint) {
-                        self.updateCropValues(breakpoint.breakpoint_id, detail);
-                    }
-                },
-                onCropEnd: function () {
-                    self.autoSave();
-                }
-            });
-        },
-
-        /**
-         * Initialize observables
+         * @inheritdoc
          */
         initObservable: function () {
             this._super();
+            this.revision = ko.observable(0);
+            this.statesList = ko.observableArray([]);
+            this.activeId = ko.observable(null);
+            this.busyText = ko.observable('');
+            this.browserFormats = ko.observable({});
+            this.previews = ko.observable({});
+            this.comparisonCode = ko.observable(null);
+            this.active = ko.pureComputed(function () {
+                var id = this.activeId();
 
-            this.observe(['breakpoints', 'cropperInitialized', 'bannerId', 'sliderId']);
+                return this.statesList().filter(function (state) {
+                    return state.id === id;
+                })[0] || null;
+            }, this);
+            this.activeSourceUrl = ko.pureComputed(function () {
+                var state = this.active();
 
-            this.activeBreakpoint = ko.observable(null);
-            this.isLoading = ko.observable(false);
-            this.isSaving = ko.observable(false);
-            this.isUploading = ko.observable(false);
-            this.crops = ko.observable({});
-            this.desktopImageUrl = ko.observable(null);
-            this.breakpointImages = ko.observable({});
-            this.comparisonMode = ko.observable('webp');
-            this.showComparison = ko.observable(false);
-            this.compressionProgress = ko.observable(0);
-            this.compressionMessage = ko.observable('');
-            this.isCompressing = ko.observable(false);
-            this.wasmNotSupported = ko.observable(false);
-            this.previewUrls = ko.observable({});
-            this.savedCropsState = {};
-            this.autoSaveHint = $t('Saves crop position and quality settings only. Images are generated when you save the banner.');
+                this.revision();
 
-            this.subscribeToComparisonToggle();
+                return state && !state.remove ? this.model.sourceOf(state).url || '' : '';
+            }, this);
+            this.activeSourceUrl.subscribe(this.detachCropper, this, 'beforeChange');
+            this.tabs = ko.pureComputed(function () {
+                this.revision();
+
+                return view.tabs(this.statesList(), this.activeId(), this.model.isChanged);
+            }, this);
+            this.panel = ko.pureComputed(function () {
+                var state = this.active();
+
+                this.revision();
+
+                return state ? view.panel(state, this.model.sourceOf(state)) : null;
+            }, this);
+            this.formatRows = ko.pureComputed(function () {
+                var state = this.active();
+
+                return state ? view.formatRows(state, this.browserFormats(), this.touch.bind(this)) : [];
+            }, this);
+            this.comparison = ko.pureComputed(function () {
+                var state = this.active();
+
+                return state ? view.comparison(state, this.previews()[state.id] || null, this.comparisonCode()) : null;
+            }, this);
 
             return this;
         },
 
-        // ==================== HELPER METHODS ====================
-
         /**
-         * Fields that trigger image regeneration when changed
-         */
-        imageRelatedFields: [
-            'crop_x', 'crop_y', 'crop_width', 'crop_height',
-            'webp_quality', 'avif_quality',
-            'generate_webp', 'generate_avif',
-            'source_image', 'custom_source_image'
-        ],
-
-        /**
-         * Store current crops state as saved state
-         */
-        storeSavedCropsState: function () {
-            var crops = this.crops();
-            this.savedCropsState = JSON.parse(JSON.stringify(crops));
-        },
-
-        /**
-         * Get list of breakpoint IDs that have changed image settings
+         * Load received breakpoint entries into the editor and show the first tab
          *
-         * @returns {Array}
+         * @param {Array} rawList
+         * @param {Boolean} fromForm True for the form's own data, false for a newly chosen slider's breakpoints
+         * @returns {void}
          */
-        getChangedBreakpointIds: function () {
-            var self = this;
-            var currentCrops = this.crops();
-            var savedCrops = this.savedCropsState;
-            var changedIds = [];
-
-            Object.keys(currentCrops).forEach(function (breakpointId) {
-                var current = currentCrops[breakpointId] || {};
-                var saved = savedCrops[breakpointId] || {};
-                var hasChanges = false;
-
-                self.imageRelatedFields.forEach(function (field) {
-                    if (hasChanges) {
-                        return;
-                    }
-
-                    var currentValue = current[field];
-                    var savedValue = saved[field];
-
-                    // Normalize undefined/null to compare properly
-                    if (currentValue === undefined || currentValue === null) {
-                        currentValue = '';
-                    }
-                    if (savedValue === undefined || savedValue === null) {
-                        savedValue = '';
-                    }
-
-                    if (String(currentValue) !== String(savedValue)) {
-                        hasChanges = true;
-                    }
-                });
-
-                if (hasChanges) {
-                    changedIds.push(breakpointId);
-                }
-            });
-
-            return changedIds;
+        showStates: function (rawList, fromForm) {
+            this.detachCropper();
+            Object.keys(this.previews()).forEach(function (id) {
+                view.releasePreview(this.previews()[id]);
+            }, this);
+            this.previews({});
+            this.model.load(rawList, fromForm, fromForm ? this.pendingCrops : null);
+            this.statesList(this.model.states);
+            this.activeId(this.model.states.length ? this.model.states[0].id : null);
+            this.touch();
         },
 
         /**
-         * Check if WebP generation is enabled
+         * Tell the bindings that a crop changed
          *
-         * @param {Object} cropData
-         * @returns {Boolean}
+         * @returns {void}
          */
-        isWebpEnabled: function (cropData) {
-            return cropData.generate_webp !== false
-                && cropData.generate_webp !== 0
-                && cropData.generate_webp !== '0';
+        touch: function () {
+            this.revision(this.revision() + 1);
         },
 
         /**
-         * Check if AVIF generation is enabled
+         * Load the breakpoints of a newly chosen slider; also run once on start, in case the breakpoints the form
+         * came with belong to another slider than its slider field
          *
-         * @param {Object} cropData
-         * @returns {Boolean}
-         */
-        isAvifEnabled: function (cropData) {
-            return cropData.generate_avif === true
-                || cropData.generate_avif === 1
-                || cropData.generate_avif === '1';
-        },
-
-        /**
-         * Update crop data with image response
-         *
-         * @param {Object} cropData
-         * @param {Object} response
-         * @param {Boolean} includeSizes
-         * @returns {Object}
-         */
-        updateCropDataFromResponse: function (cropData, response, includeSizes) {
-            var updated = Object.assign({}, cropData);
-
-            updated.cropped_image_url = fileUtils.addCacheBuster(response.cropped);
-            updated.webp_image_url = response.webp ? fileUtils.addCacheBuster(response.webp) : null;
-            updated.avif_image_url = response.avif ? fileUtils.addCacheBuster(response.avif) : null;
-
-            if (includeSizes && response.sizes) {
-                updated.original_size = response.sizes.original;
-                updated.webp_size = response.sizes.webp;
-                updated.avif_size = response.sizes.avif;
-            } else {
-                updated.original_size = null;
-                updated.webp_size = null;
-                updated.avif_size = null;
-            }
-
-            return updated;
-        },
-
-        /**
-         * Build crop save data object
-         *
-         * @param {Object} breakpoint
-         * @param {Object} cropData
-         * @param {String} sourceImage
-         * @returns {Object}
-         */
-        buildCropSaveData: function (breakpoint, cropData, sourceImage) {
-            return {
-                banner_id: this.bannerId(),
-                breakpoint_id: breakpoint.breakpoint_id,
-                source_image: sourceImage,
-                crop_x: cropData.crop_x || 0,
-                crop_y: cropData.crop_y || 0,
-                crop_width: cropData.crop_width || 0,
-                crop_height: cropData.crop_height || 0,
-                generate_webp: this.isWebpEnabled(cropData) ? 1 : 0,
-                generate_avif: this.isAvifEnabled(cropData) ? 1 : 0,
-                webp_quality: cropData.webp_quality || config.WEBP_QUALITY_DEFAULT,
-                avif_quality: cropData.avif_quality || config.AVIF_QUALITY_DEFAULT,
-                sort_order: breakpoint.sort_order || 0
-            };
-        },
-
-        /**
-         * Update crop data after save
-         *
-         * @param {Object} cropData
-         * @param {Object} response
-         * @param {String} sourceImage
-         */
-        updateCropDataAfterSave: function (cropData, response, sourceImage) {
-            cropData.crop_id = response.crop_id;
-            cropData.source_image = sourceImage;
-            cropData.generate_webp = this.isWebpEnabled(cropData);
-            cropData.generate_avif = this.isAvifEnabled(cropData);
-        },
-
-        /**
-         * Generate on server as fallback
-         *
-         * @param {Object} cropData
-         * @param {Number} breakpointId
-         * @returns {Promise}
-         */
-        generateOnServerFallback: function (cropData, breakpointId) {
-            var self = this;
-
-            return ajaxService.generateImages(this.generateUrl, {crop_id: cropData.crop_id})
-                .then(function (response) {
-                    if (response.images) {
-                        var updated = self.updateCropDataFromResponse(cropData, response.images, false);
-                        self.setCropData(breakpointId, updated);
-                    }
-                })
-                .catch(function () {
-                    // Silent fail
-                });
-        },
-
-        // ==================== FORM SAVE METHODS ====================
-
-        /**
-         * Generate images for all breakpoints and include in form data
-         *
-         * @return {Promise}
-         */
-        generateAllImagesForFormSubmit: function () {
-            return this.generateImagesForFormSubmit(null);
-        },
-
-        /**
-         * Generate images only for changed breakpoints
-         *
-         * @return {Promise}
-         */
-        generateChangedImagesForFormSubmit: function () {
-            var changedIds = this.getChangedBreakpointIds();
-            return this.generateImagesForFormSubmit(changedIds);
-        },
-
-        /**
-         * Generate images for specified breakpoints (or all if breakpointIds is null)
-         *
-         * @param {Array|null} breakpointIds
-         * @return {Promise}
-         */
-        generateImagesForFormSubmit: function (breakpointIds) {
-            var self = this;
-            var promises = [];
-
-            this.breakpoints().forEach(function (breakpoint) {
-                var id = String(breakpoint.breakpoint_id);
-
-                // Skip if we have a filter and this breakpoint is not in it
-                if (breakpointIds !== null && breakpointIds.indexOf(id) === -1) {
-                    return;
-                }
-
-                var cropData = self.getCropData(breakpoint.breakpoint_id);
-                var sourceImageUrl = self.getBreakpointSourceImageUrl(breakpoint.breakpoint_id);
-
-                if (!sourceImageUrl) {
-                    return;
-                }
-
-                var promise = self.generateImageForBreakpoint(breakpoint, cropData, sourceImageUrl);
-                promises.push(promise);
-            });
-
-            return Promise.all(promises);
-        },
-
-        /**
-         * Generate image for a single breakpoint
-         *
-         * @param {Object} breakpoint
-         * @param {Object} cropData
-         * @param {String} sourceImageUrl
-         * @return {Promise}
-         */
-        generateImageForBreakpoint: function (breakpoint, cropData, sourceImageUrl) {
-            var self = this;
-
-            return new Promise(function (resolve) {
-                var img = new Image();
-                img.crossOrigin = 'anonymous';
-
-                img.onload = function () {
-                    self.processImageToBase64(img, breakpoint, cropData)
-                        .then(function (imageData) {
-                            var updated = Object.assign({}, cropData, imageData);
-                            self.setCropData(breakpoint.breakpoint_id, updated, true);
-                            resolve();
-                        })
-                        .catch(function () {
-                            resolve();
-                        });
-                };
-
-                img.onerror = function () {
-                    resolve();
-                };
-
-                img.src = sourceImageUrl;
-            });
-        },
-
-        /**
-         * Process image to base64 for form submission
-         *
-         * @param {HTMLImageElement} img
-         * @param {Object} breakpoint
-         * @param {Object} cropData
-         * @return {Promise}
-         */
-        processImageToBase64: function (img, breakpoint, cropData) {
-            var canvas = document.createElement('canvas');
-            var ctx = canvas.getContext('2d');
-
-            var cropX = cropData.crop_x || 0;
-            var cropY = cropData.crop_y || 0;
-            var cropWidth = cropData.crop_width || img.naturalWidth;
-            var cropHeight = cropData.crop_height || img.naturalHeight;
-            var targetWidth = breakpoint.target_width || cropWidth;
-
-            var targetHeight = (cropWidth > 0 && cropHeight > 0)
-                ? Math.round(targetWidth * cropHeight / cropWidth)
-                : (breakpoint.target_height || cropHeight);
-
-            canvas.width = targetWidth;
-            canvas.height = targetHeight;
-
-            ctx.drawImage(img, cropX, cropY, cropWidth, cropHeight, 0, 0, targetWidth, targetHeight);
-
-            var options = {
-                webpQuality: cropData.webp_quality || config.WEBP_QUALITY_DEFAULT,
-                avifQuality: cropData.avif_quality || config.AVIF_QUALITY_DEFAULT,
-                generateWebp: this.isWebpEnabled(cropData),
-                generateAvif: this.isAvifEnabled(cropData),
-                originalMimeType: 'image/jpeg'
-            };
-
-            return imageCompressor.compressAllFormats(canvas, options)
-                .then(function (results) {
-                    var imageData = {};
-                    var base64Promises = [];
-
-                    if (results.original && results.original.blob) {
-                        imageData.cropped_image_format = results.original.format || 'jpg';
-                        base64Promises.push(
-                            imageCompressor.blobToBase64(results.original.blob)
-                                .then(function (base64) {
-                                    imageData.cropped_image_base64 = base64;
-                                })
-                        );
-                    }
-
-                    if (results.webp && results.webp.blob) {
-                        base64Promises.push(
-                            imageCompressor.blobToBase64(results.webp.blob)
-                                .then(function (base64) {
-                                    imageData.webp_image_base64 = base64;
-                                })
-                        );
-                    }
-
-                    if (results.avif && results.avif.blob) {
-                        base64Promises.push(
-                            imageCompressor.blobToBase64(results.avif.blob)
-                                .then(function (base64) {
-                                    imageData.avif_image_base64 = base64;
-                                })
-                        );
-                    }
-
-                    return Promise.all(base64Promises).then(function () {
-                        return imageData;
-                    });
-                });
-        },
-
-        /**
-         * Sync crops data to the form data provider
-         * This ensures crops data is included in the form submission
-         */
-        syncCropsToProvider: function () {
-            var self = this;
-            var cropsData = [];
-
-            this.breakpoints().forEach(function (breakpoint) {
-                var cropData = self.getCropData(breakpoint.breakpoint_id);
-                var sourceImage = self.getBreakpointSourceImageFile(breakpoint.breakpoint_id);
-
-                if (!sourceImage && cropData.source_image) {
-                    sourceImage = cropData.source_image;
-                }
-
-                if (!sourceImage) {
-                    return;
-                }
-
-                cropsData.push({
-                    breakpoint_id: breakpoint.breakpoint_id,
-                    source_image: sourceImage,
-                    crop_x: cropData.crop_x || 0,
-                    crop_y: cropData.crop_y || 0,
-                    crop_width: cropData.crop_width || 0,
-                    crop_height: cropData.crop_height || 0,
-                    generate_webp: self.isWebpEnabled(cropData) ? 1 : 0,
-                    generate_avif: self.isAvifEnabled(cropData) ? 1 : 0,
-                    webp_quality: cropData.webp_quality || config.WEBP_QUALITY_DEFAULT,
-                    avif_quality: cropData.avif_quality || config.AVIF_QUALITY_DEFAULT,
-                    sort_order: breakpoint.sort_order || 0,
-                    cropped_image_base64: cropData.cropped_image_base64 || null,
-                    cropped_image_format: cropData.cropped_image_format || null,
-                    webp_image_base64: cropData.webp_image_base64 || null,
-                    avif_image_base64: cropData.avif_image_base64 || null
-                });
-            });
-
-            registry.async(this.provider)(function (provider) {
-                if (provider && typeof provider.set === 'function') {
-                    provider.set('data.responsive_crops_data', cropsData);
-                }
-            });
-
-            return cropsData;
-        },
-
-        /**
-         * Check if there are any breakpoints that need image generation
-         *
-         * @returns {Boolean}
-         */
-        hasBreakpointsNeedingGeneration: function () {
-            var self = this;
-            var needsGeneration = false;
-
-            this.breakpoints().forEach(function (breakpoint) {
-                if (needsGeneration) {
-                    return;
-                }
-
-                var cropData = self.getCropData(breakpoint.breakpoint_id);
-                var sourceImageUrl = self.getBreakpointSourceImageUrl(breakpoint.breakpoint_id);
-
-                if (!sourceImageUrl) {
-                    return;
-                }
-
-                // Check if this breakpoint has changes that need regeneration
-                var changedIds = self.getChangedBreakpointIds();
-                if (changedIds.indexOf(String(breakpoint.breakpoint_id)) !== -1) {
-                    needsGeneration = true;
-                    return;
-                }
-
-                // Check if crop data exists but images were never generated
-                if (cropData.crop_width > 0 && cropData.crop_height > 0 && !cropData.cropped_image_url) {
-                    needsGeneration = true;
-                }
-            });
-
-            return needsGeneration;
-        },
-
-        /**
-         * Save crop data and then execute callback
-         * Generates images in browser and includes them in form submission
-         *
-         * @param {Function} saveCallback
-         * @param {Boolean} redirect
-         */
-        saveCropDataWithCallback: function (saveCallback, redirect) {
-            var self = this;
-
-            // If no breakpoints, just save
-            if (this.breakpoints().length === 0) {
-                saveCallback();
-                return;
-            }
-
-            // Check if any breakpoints have changes that need image generation
-            if (!this.hasBreakpointsNeedingGeneration()) {
-                // No changes - just sync existing data and save
-                this.syncCropsToProvider();
-                saveCallback();
-                return;
-            }
-
-            self.isLoading(true);
-            self.compressionMessage($t('Generating images...'));
-
-            this.generateChangedImagesForFormSubmit()
-                .then(function () {
-                    self.syncCropsToProvider();
-                    self.storeSavedCropsState();
-                    self.isLoading(false);
-                    saveCallback();
-                })
-                .catch(function () {
-                    self.syncCropsToProvider();
-                    self.isLoading(false);
-                    saveCallback();
-                });
-        },
-
-        /**
-         * Save crop data and save form
-         */
-        generateAndSave: function () {
-            this.saveCropDataWithCallback(this.saveForm.bind(this), true);
-        },
-
-        /**
-         * Save crop data and save form with continue edit
-         */
-        generateAndSaveAndContinue: function () {
-            this.saveCropDataWithCallback(this.saveFormAndContinue.bind(this), false);
-        },
-
-        /**
-         * Save the form via UI component
-         *
-         * @param {Boolean} redirect
-         */
-        saveFormInternal: function (redirect) {
-            var formComponentName = this.ns + '.' + this.ns;
-
-            registry.async(formComponentName)(function (form) {
-                if (form && typeof form.save === 'function') {
-                    form.save(redirect);
-                }
-            });
-        },
-
-        saveForm: function () {
-            this.saveFormInternal(true);
-        },
-
-        saveFormAndContinue: function () {
-            this.saveFormInternal(false);
-        },
-
-        // ==================== CROP DATA METHODS ====================
-
-        /**
-         * Get crop data for breakpoint
-         *
-         * @param {Number|String} breakpointId
-         * @returns {Object}
-         */
-        getCropData: function (breakpointId) {
-            var crops = this.crops();
-            var id = String(breakpointId);
-            return crops[id] || crops[breakpointId] || {};
-        },
-
-        /**
-         * Set crop data for breakpoint
-         *
-         * @param {Number|String} breakpointId
-         * @param {Object} data
-         * @param {Boolean} silent
-         */
-        setCropData: function (breakpointId, data, silent) {
-            var crops = this.crops();
-            crops[String(breakpointId)] = data;
-
-            if (!silent) {
-                this.crops(Object.assign({}, crops));
-            }
-        },
-
-        /**
-         * Save crop data for single breakpoint
-         *
-         * @param {Object} breakpoint
-         * @param {Boolean} silent
-         */
-        saveCropData: function (breakpoint, silent) {
-            var self = this;
-            var cropData = this.getCropData(breakpoint.breakpoint_id);
-            var sourceImage = this.getBreakpointSourceImageFile(breakpoint.breakpoint_id);
-
-            if (!sourceImage) {
-                if (!silent) {
-                    ajaxService.showWarning($t('Please upload an image first.'));
-                }
-                return;
-            }
-
-            if (!this.bannerId()) {
-                if (!silent) {
-                    ajaxService.showWarning($t('Please save the banner first.'));
-                }
-                return;
-            }
-
-            var data = this.buildCropSaveData(breakpoint, cropData, sourceImage);
-
-            self.isSaving(true);
-
-            ajaxService.saveCropData(this.saveUrl, data)
-                .then(function (response) {
-                    self.isSaving(false);
-                    self.updateCropDataAfterSave(cropData, response, sourceImage);
-                    cropData.webp_quality = data.webp_quality;
-                    cropData.avif_quality = data.avif_quality;
-                    self.setCropData(breakpoint.breakpoint_id, cropData, true);
-                })
-                .catch(function (error) {
-                    self.isSaving(false);
-                    ajaxService.showError(error.message);
-                });
-        },
-
-        /**
-         * Save all breakpoints
-         *
-         * @return {Promise}
-         */
-        saveAllBreakpoints: function () {
-            var self = this;
-            var savePromises = [];
-
-            this.breakpoints().forEach(function (breakpoint) {
-                var cropData = self.getCropData(breakpoint.breakpoint_id);
-                var sourceImage = self.getBreakpointSourceImageFile(breakpoint.breakpoint_id);
-
-                if (!sourceImage && !cropData.crop_id) {
-                    return;
-                }
-
-                if (!sourceImage && cropData.source_image) {
-                    sourceImage = cropData.source_image;
-                }
-
-                if (!sourceImage) {
-                    return;
-                }
-
-                var data = self.buildCropSaveData(breakpoint, cropData, sourceImage);
-
-                var promise = ajaxService.saveCropData(self.saveUrl, data)
-                    .then(function (response) {
-                        self.updateCropDataAfterSave(cropData, response, sourceImage);
-                        cropData.webp_quality = data.webp_quality;
-                        cropData.avif_quality = data.avif_quality;
-                        self.setCropData(breakpoint.breakpoint_id, cropData, true);
-                    });
-
-                savePromises.push(promise);
-            });
-
-            return Promise.all(savePromises);
-        },
-
-        /**
-         * Auto-save crop data with debounce
-         */
-        autoSave: function () {
-            var self = this;
-            var breakpoint = this.activeBreakpoint();
-
-            if (!breakpoint) {
-                return;
-            }
-
-            if (this.saveTimeout) {
-                clearTimeout(this.saveTimeout);
-            }
-
-            this.saveTimeout = setTimeout(function () {
-                self.saveCropData(breakpoint, true);
-            }, config.AUTO_SAVE_DELAY);
-        },
-
-        // ==================== IMAGE GENERATION METHODS ====================
-
-        /**
-         * Generate images for breakpoint
-         *
-         * @param {Object} breakpoint
-         */
-        generateImages: function (breakpoint) {
-            var cropData = this.getCropData(breakpoint.breakpoint_id);
-
-            if (!cropData || !cropData.crop_id) {
-                ajaxService.showWarning($t('Please save the crop data first.'));
-                return;
-            }
-
-            if (this.useBrowserCompression && this.cropperManager.isInitialized()) {
-                this.generateImagesInBrowser(breakpoint);
-            } else {
-                this.generateImagesOnServer(breakpoint);
-            }
-        },
-
-        /**
-         * Generate preview images for comparison (browser-only, no server upload)
-         *
-         * @param {Object} breakpoint
-         */
-        generatePreviewImages: function (breakpoint) {
-            var self = this;
-            var cropData = this.getCropData(breakpoint.breakpoint_id);
-
-            if (!this.cropperManager.isInitialized()) {
-                ajaxService.showWarning($t('Cropper is not initialized.'));
-                return;
-            }
-
-            self.isCompressing(true);
-            self.compressionProgress(0);
-            self.compressionMessage($t('Generating preview...'));
-
-            var targetWidth = breakpoint.target_width;
-            var cropWidth = cropData.crop_width || 0;
-            var cropHeight = cropData.crop_height || 0;
-
-            var targetHeight = (cropWidth > 0 && cropHeight > 0)
-                ? Math.round(targetWidth * cropHeight / cropWidth)
-                : breakpoint.target_height;
-
-            var canvas = this.cropperManager.getCroppedCanvas(targetWidth, targetHeight);
-
-            if (!canvas) {
-                self.isCompressing(false);
-                ajaxService.showError($t('Failed to get cropped canvas.'));
-                return;
-            }
-
-            var options = {
-                webpQuality: cropData.webp_quality || config.WEBP_QUALITY_DEFAULT,
-                avifQuality: cropData.avif_quality || config.AVIF_QUALITY_DEFAULT,
-                generateWebp: this.isWebpEnabled(cropData),
-                generateAvif: this.isAvifEnabled(cropData),
-                originalMimeType: 'image/jpeg'
-            };
-
-            imageCompressor.compressAllFormats(canvas, options, function (progress, message) {
-                self.compressionProgress(progress);
-                self.compressionMessage(message);
-            })
-                .then(function (results) {
-                    self.isCompressing(false);
-                    self.compressionProgress(100);
-
-                    // Revoke old preview URLs
-                    if (cropData.preview_cropped_url) {
-                        URL.revokeObjectURL(cropData.preview_cropped_url);
-                    }
-                    if (cropData.preview_webp_url) {
-                        URL.revokeObjectURL(cropData.preview_webp_url);
-                    }
-                    if (cropData.preview_avif_url) {
-                        URL.revokeObjectURL(cropData.preview_avif_url);
-                    }
-
-                    // Create new preview blob URLs
-                    var updated = Object.assign({}, cropData);
-
-                    if (results.original && results.original.blob) {
-                        updated.cropped_image_url = URL.createObjectURL(results.original.blob);
-                        updated.original_size = results.original.size;
-                        updated.preview_cropped_url = updated.cropped_image_url;
-                    }
-
-                    if (results.webp && results.webp.blob) {
-                        updated.webp_image_url = URL.createObjectURL(results.webp.blob);
-                        updated.webp_size = results.webp.size;
-                        updated.preview_webp_url = updated.webp_image_url;
-                    }
-
-                    if (results.avif && results.avif.blob) {
-                        updated.avif_image_url = URL.createObjectURL(results.avif.blob);
-                        updated.avif_size = results.avif.size;
-                        updated.preview_avif_url = updated.avif_image_url;
-                    }
-
-                    self.setCropData(breakpoint.breakpoint_id, updated);
-                    self.showComparison(true);
-                })
-                .catch(function (error) {
-                    self.isCompressing(false);
-                    ajaxService.showError(error.message || $t('Failed to generate preview.'));
-                });
-        },
-
-        /**
-         * Generate images using browser-based compression
-         *
-         * @param {Object} breakpoint
-         */
-        generateImagesInBrowser: function (breakpoint) {
-            var self = this;
-            var cropData = this.getCropData(breakpoint.breakpoint_id);
-
-            self.isCompressing(true);
-            self.compressionProgress(0);
-            self.compressionMessage($t('Preparing image...'));
-
-            var targetWidth = breakpoint.target_width;
-            var cropWidth = cropData.crop_width || 0;
-            var cropHeight = cropData.crop_height || 0;
-
-            // Calculate target height based on crop aspect ratio to avoid image stretching
-            var targetHeight = (cropWidth > 0 && cropHeight > 0)
-                ? Math.round(targetWidth * cropHeight / cropWidth)
-                : breakpoint.target_height;
-
-            var canvas = this.cropperManager.getCroppedCanvas(targetWidth, targetHeight);
-
-            if (!canvas) {
-                self.isCompressing(false);
-                ajaxService.showError($t('Failed to get cropped canvas.'));
-                return;
-            }
-
-            var options = {
-                webpQuality: cropData.webp_quality || config.WEBP_QUALITY_DEFAULT,
-                avifQuality: cropData.avif_quality || config.AVIF_QUALITY_DEFAULT,
-                generateWebp: this.isWebpEnabled(cropData),
-                generateAvif: this.isAvifEnabled(cropData),
-                originalMimeType: 'image/jpeg'
-            };
-
-            imageCompressor.compressAllFormats(canvas, options, function (progress, message) {
-                self.compressionProgress(progress);
-                self.compressionMessage(message);
-            })
-                .then(function (results) {
-                    self.compressionMessage($t('Uploading...'));
-                    return self.uploadCompressedImages(breakpoint, results, cropData);
-                })
-                .then(function (response) {
-                    self.isCompressing(false);
-                    self.compressionProgress(100);
-
-                    if (response.images) {
-                        var updated = self.updateCropDataFromResponse(cropData, response.images, true);
-                        self.setCropData(breakpoint.breakpoint_id, updated);
-                        self.refreshComparison(breakpoint.breakpoint_id);
-                    }
-
-                    ajaxService.showSuccess(response.message || $t('Images generated.'));
-                })
-                .catch(function () {
-                    self.isCompressing(false);
-                    self.generateImagesOnServer(breakpoint);
-                });
-        },
-
-        /**
-         * Generate images using server-side processing
-         *
-         * @param {Object} breakpoint
-         */
-        generateImagesOnServer: function (breakpoint) {
-            var self = this;
-            var cropData = this.getCropData(breakpoint.breakpoint_id);
-
-            self.isLoading(true);
-
-            ajaxService.generateImages(this.generateUrl, {crop_id: cropData.crop_id})
-                .then(function (response) {
-                    self.isLoading(false);
-
-                    if (response.images) {
-                        var updated = self.updateCropDataFromResponse(cropData, response.images, false);
-                        self.setCropData(breakpoint.breakpoint_id, updated);
-                        self.refreshComparison(breakpoint.breakpoint_id);
-                    }
-
-                    ajaxService.showSuccess(response.message);
-                })
-                .catch(function (error) {
-                    self.isLoading(false);
-                    ajaxService.showError(error.message);
-                });
-        },
-
-        /**
-         * Generate images for all breakpoints using browser compression
-         *
-         * @return {Promise}
-         */
-        generateAllBreakpointImages: function () {
-            var self = this;
-            var toProcess = [];
-
-            this.breakpoints().forEach(function (breakpoint) {
-                var cropData = self.getCropData(breakpoint.breakpoint_id);
-                if (cropData && cropData.crop_id) {
-                    toProcess.push({breakpoint: breakpoint, cropData: cropData});
-                }
-            });
-
-            if (toProcess.length === 0) {
-                return Promise.resolve();
-            }
-
-            return toProcess.reduce(function (chain, item) {
-                return chain.then(function () {
-                    return self.generateBreakpointImageInBrowser(item.breakpoint, item.cropData);
-                });
-            }, Promise.resolve());
-        },
-
-        /**
-         * Generate images only for specified breakpoint IDs
-         *
-         * @param {Array} breakpointIds
-         * @return {Promise}
-         */
-        generateBreakpointImagesByIds: function (breakpointIds) {
-            var self = this;
-            var toProcess = [];
-
-            this.breakpoints().forEach(function (breakpoint) {
-                var id = String(breakpoint.breakpoint_id);
-                if (breakpointIds.indexOf(id) === -1) {
-                    return;
-                }
-
-                var cropData = self.getCropData(breakpoint.breakpoint_id);
-                if (cropData && cropData.crop_id) {
-                    toProcess.push({breakpoint: breakpoint, cropData: cropData});
-                }
-            });
-
-            if (toProcess.length === 0) {
-                return Promise.resolve();
-            }
-
-            return toProcess.reduce(function (chain, item) {
-                return chain.then(function () {
-                    return self.generateBreakpointImageInBrowser(item.breakpoint, item.cropData);
-                });
-            }, Promise.resolve());
-        },
-
-        /**
-         * Generate images for a single breakpoint using browser compression
-         *
-         * @param {Object} breakpoint
-         * @param {Object} cropData
-         * @return {Promise}
-         */
-        generateBreakpointImageInBrowser: function (breakpoint, cropData) {
-            var self = this;
-
-            return new Promise(function (resolve) {
-                var sourceImageUrl = self.getBreakpointSourceImageUrl(breakpoint.breakpoint_id);
-
-                if (!sourceImageUrl) {
-                    resolve();
-                    return;
-                }
-
-                var img = new Image();
-                img.crossOrigin = 'anonymous';
-
-                img.onload = function () {
-                    self.processImageOnCanvas(img, breakpoint, cropData)
-                        .then(resolve)
-                        .catch(function () {
-                            self.generateOnServerFallback(cropData, breakpoint.breakpoint_id).then(resolve);
-                        });
-                };
-
-                img.onerror = function () {
-                    self.generateOnServerFallback(cropData, breakpoint.breakpoint_id).then(resolve);
-                };
-
-                img.src = sourceImageUrl;
-            });
-        },
-
-        /**
-         * Process image on canvas for browser compression
-         *
-         * @param {HTMLImageElement} img
-         * @param {Object} breakpoint
-         * @param {Object} cropData
-         * @return {Promise}
-         */
-        processImageOnCanvas: function (img, breakpoint, cropData) {
-            var self = this;
-            var canvas = document.createElement('canvas');
-            var ctx = canvas.getContext('2d');
-
-            var cropX = cropData.crop_x || 0;
-            var cropY = cropData.crop_y || 0;
-            var cropWidth = cropData.crop_width || img.naturalWidth;
-            var cropHeight = cropData.crop_height || img.naturalHeight;
-            var targetWidth = breakpoint.target_width || cropWidth;
-
-            // Always calculate target height based on crop aspect ratio to avoid image stretching
-            var targetHeight = (cropWidth > 0 && cropHeight > 0)
-                ? Math.round(targetWidth * cropHeight / cropWidth)
-                : (breakpoint.target_height || cropHeight);
-
-            canvas.width = targetWidth;
-            canvas.height = targetHeight;
-
-            ctx.drawImage(img, cropX, cropY, cropWidth, cropHeight, 0, 0, targetWidth, targetHeight);
-
-            var options = {
-                webpQuality: cropData.webp_quality || config.WEBP_QUALITY_DEFAULT,
-                avifQuality: cropData.avif_quality || config.AVIF_QUALITY_DEFAULT,
-                generateWebp: this.isWebpEnabled(cropData),
-                generateAvif: this.isAvifEnabled(cropData),
-                originalMimeType: 'image/jpeg'
-            };
-
-            return imageCompressor.compressAllFormats(canvas, options)
-                .then(function (results) {
-                    return self.uploadCompressedImages(breakpoint, results, cropData);
-                })
-                .then(function (response) {
-                    if (response.images) {
-                        var updated = self.updateCropDataFromResponse(cropData, response.images, true);
-                        self.setCropData(breakpoint.breakpoint_id, updated);
-                    }
-                });
-        },
-
-        /**
-         * Upload compressed images to server
-         *
-         * @param {Object} breakpoint
-         * @param {Object} results
-         * @param {Object} cropData
-         * @returns {Promise}
-         */
-        uploadCompressedImages: function (breakpoint, results, cropData) {
-            var formData = new FormData();
-
-            formData.append('crop_id', cropData.crop_id);
-            formData.append('crop_x', cropData.crop_x || 0);
-            formData.append('crop_y', cropData.crop_y || 0);
-            formData.append('crop_width', cropData.crop_width || 0);
-            formData.append('crop_height', cropData.crop_height || 0);
-            formData.append('webp_quality', cropData.webp_quality || config.WEBP_QUALITY_DEFAULT);
-            formData.append('avif_quality', cropData.avif_quality || config.AVIF_QUALITY_DEFAULT);
-
-            if (results.original && results.original.blob) {
-                var ext = results.original.format === 'png' ? 'png' : 'jpg';
-                formData.append('cropped_image', results.original.blob, 'cropped.' + ext);
-            }
-
-            if (results.webp && results.webp.blob) {
-                formData.append('webp_image', results.webp.blob, 'cropped.webp');
-            }
-
-            if (results.avif && results.avif.blob) {
-                formData.append('avif_image', results.avif.blob, 'cropped.avif');
-            }
-
-            return ajaxService.uploadCompressedImages(this.uploadCompressedUrl, formData);
-        },
-
-        // ==================== SOURCE IMAGE METHODS ====================
-
-        /**
-         * Get source image URL for a breakpoint
-         *
-         * @param {Number} breakpointId
-         * @returns {String|null}
-         */
-        getBreakpointSourceImageUrl: function (breakpointId) {
-            var images = this.breakpointImages();
-
-            if (images[breakpointId] && images[breakpointId].url) {
-                return images[breakpointId].url;
-            }
-
-            var cropData = this.getCropData(breakpointId);
-
-            if (cropData && cropData.source_image_url) {
-                return cropData.source_image_url;
-            }
-
-            return this.desktopImageUrl();
-        },
-
-        /**
-         * Get source image file path for a breakpoint
-         *
-         * @param {Number} breakpointId
-         * @returns {String|null}
-         */
-        getBreakpointSourceImageFile: function (breakpointId) {
-            var images = this.breakpointImages();
-
-            if (images[breakpointId] && images[breakpointId].file) {
-                return images[breakpointId].file;
-            }
-
-            var cropData = this.getCropData(breakpointId);
-
-            if (cropData && cropData.source_image) {
-                return cropData.source_image;
-            }
-
-            return this.desktopImageFile || null;
-        },
-
-        /**
-         * Check if breakpoint has a custom image
-         *
-         * @param {Number} breakpointId
-         * @returns {Boolean}
-         */
-        hasCustomBreakpointImage: function (breakpointId) {
-            var images = this.breakpointImages();
-            return !!(images[breakpointId] && images[breakpointId].file);
-        },
-
-        /**
-         * Check if any source image is available
-         *
-         * @param {Number} breakpointId
-         * @returns {Boolean}
-         */
-        hasSourceImage: function (breakpointId) {
-            return !!this.getBreakpointSourceImageUrl(breakpointId);
-        },
-
-        /**
-         * Set custom image for a breakpoint
-         *
-         * @param {Number} breakpointId
-         * @param {Object} imageData
-         */
-        setBreakpointImage: function (breakpointId, imageData) {
-            var images = this.breakpointImages();
-            images[breakpointId] = imageData;
-            this.breakpointImages(Object.assign({}, images));
-
-            var cropData = this.getCropData(breakpointId);
-            cropData.custom_source_image = imageData.file;
-            cropData.custom_source_image_url = imageData.url;
-            this.setCropData(breakpointId, cropData);
-        },
-
-        /**
-         * Clear custom image for a breakpoint
-         *
-         * @param {Number} breakpointId
-         */
-        clearBreakpointImage: function (breakpointId) {
-            // Destroy cropper first to prevent visual flash
-            this.destroyCropper();
-
-            var images = this.breakpointImages();
-            delete images[breakpointId];
-            this.breakpointImages(Object.assign({}, images));
-
-            var cropData = this.getCropData(breakpointId);
-            cropData.custom_source_image = null;
-            cropData.custom_source_image_url = null;
-            cropData.source_image_url = null;
-            cropData.source_image = null;
-            cropData.crop_x = 0;
-            cropData.crop_y = 0;
-            cropData.crop_width = 0;
-            cropData.crop_height = 0;
-            this.setCropData(breakpointId, cropData);
-
-            var breakpoint = this.activeBreakpoint();
-            if (breakpoint && breakpoint.breakpoint_id === breakpointId) {
-                this.autoSave();
-            }
-        },
-
-        // ==================== DESKTOP IMAGE METHODS ====================
-
-        /**
-         * Subscribe to desktop image field changes
-         */
-        subscribeToDesktopImage: function () {
-            var self = this;
-
-            registry.async(this.desktopImageField)(function (imageField) {
-                if (imageField && imageField.value) {
-                    self.updateDesktopImageUrl(imageField.value());
-                    imageField.value.subscribe(function (value) {
-                        self.updateDesktopImageUrl(value);
-                    });
-                }
-            });
-        },
-
-        /**
-         * Update desktop image URL from field value
-         *
-         * @param {Array|Object} value
-         */
-        updateDesktopImageUrl: function (value) {
-            var oldFile = this.desktopImageFile;
-            var url = null;
-            var newFile = null;
-
-            if (value && Array.isArray(value) && value.length > 0) {
-                url = value[0].url || null;
-                newFile = value[0].file || value[0].name || null;
-            }
-
-            this.desktopImageFile = newFile;
-            this.desktopImageUrl(url);
-            this.destroyCropper();
-
-            // Reset breakpoints when:
-            // 1. Image is deleted (oldFile exists, newFile is null)
-            // 2. Image is replaced (both exist and different)
-            var imageDeleted = oldFile && !newFile;
-            var imageReplaced = oldFile && newFile && oldFile !== newFile;
-
-            if (imageDeleted || imageReplaced) {
-                this.resetBreakpointsUsingDesktopImage();
-            }
-        },
-
-        /**
-         * Reset crop data for all breakpoints that use the desktop image (no custom image)
-         */
-        resetBreakpointsUsingDesktopImage: function () {
-            var self = this;
-
-            this.breakpoints().forEach(function (breakpoint) {
-                var breakpointId = breakpoint.breakpoint_id;
-
-                // Skip breakpoints with custom images
-                if (self.hasCustomBreakpointImage(breakpointId)) {
-                    return;
-                }
-
-                var cropData = self.getCropData(breakpointId);
-
-                // Reset crop coordinates and clear generated images
-                cropData.crop_x = 0;
-                cropData.crop_y = 0;
-                cropData.crop_width = 0;
-                cropData.crop_height = 0;
-                cropData.source_image = null;
-                cropData.source_image_url = null;
-                cropData.cropped_image_url = null;
-                cropData.webp_image_url = null;
-                cropData.avif_image_url = null;
-                cropData.cropped_image_base64 = null;
-                cropData.webp_image_base64 = null;
-                cropData.avif_image_base64 = null;
-                cropData.original_size = null;
-                cropData.webp_size = null;
-                cropData.avif_size = null;
-
-                self.setCropData(breakpointId, cropData, true);
-            });
-
-            // Trigger observable update
-            this.crops(Object.assign({}, this.crops()));
-        },
-
-        // ==================== CROPPER METHODS ====================
-
-        /**
-         * Initialize cropper on image
-         *
-         * @param {HTMLElement} imageElement
-         * @param {Object} breakpoint
-         */
-        initCropper: function (imageElement, breakpoint) {
-            // Skip if cropper is already initialized for the same image and breakpoint
-            if (this.cropperManager.isInitialized() &&
-                this.currentCropperImage === imageElement.src &&
-                this.currentCropperBreakpointId === breakpoint.breakpoint_id) {
-                return;
-            }
-
-            this.currentCropperImage = imageElement.src;
-            this.currentCropperBreakpointId = breakpoint.breakpoint_id;
-
-            var savedCropData = this.getCropData(breakpoint.breakpoint_id);
-            this.cropperManager.init(imageElement, breakpoint, savedCropData);
-        },
-
-        /**
-         * Destroy cropper instance
-         */
-        destroyCropper: function () {
-            if (this.cropperManager) {
-                this.cropperManager.destroy();
-                this.cropperInitialized(false);
-                this.currentCropperImage = null;
-                this.currentCropperBreakpointId = null;
-            }
-        },
-
-        /**
-         * Update crop values from cropper event
-         *
-         * @param {Number} breakpointId
-         * @param {Object} detail
-         */
-        updateCropValues: function (breakpointId, detail) {
-            var cropData = this.getCropData(breakpointId);
-
-            cropData.crop_x = Math.round(detail.x);
-            cropData.crop_y = Math.round(detail.y);
-            cropData.crop_width = Math.round(detail.width);
-            cropData.crop_height = Math.round(detail.height);
-
-            this.setCropData(breakpointId, cropData, true);
-        },
-
-        // ==================== BREAKPOINT METHODS ====================
-
-        /**
-         * Set active breakpoint
-         *
-         * @param {Object} breakpoint
-         */
-        setActiveBreakpoint: function (breakpoint) {
-            this.destroyCropper();
-            this.activeBreakpoint(breakpoint);
-        },
-
-        /**
-         * Check if breakpoint is active
-         *
-         * @param {Object} breakpoint
-         * @returns {Boolean}
-         */
-        isActiveBreakpoint: function (breakpoint) {
-            var active = this.activeBreakpoint();
-            return active && active.breakpoint_id === breakpoint.breakpoint_id;
-        },
-
-        /**
-         * Get dimension text for breakpoint
-         *
-         * @param {Object} breakpoint
-         * @returns {String}
-         */
-        getDimensionText: function (breakpoint) {
-            return breakpoint.target_width + 'x' + breakpoint.target_height + ' px';
-        },
-
-        // ==================== DATA PROVIDER METHODS ====================
-
-        /**
-         * Handle changes to responsive cropper data from provider
-         *
-         * @param {Object} data
-         */
-        onResponsiveCropperDataChange: function (data) {
-            if (!data) {
-                return;
-            }
-
-            if (data.breakpoints) {
-                this.breakpoints(data.breakpoints);
-            }
-
-            if (data.crops) {
-                this.crops(data.crops);
-                this.loadBreakpointImagesFromCrops(data.crops);
-                this.storeSavedCropsState();
-            }
-
-            if (data.banner_id) {
-                this.bannerId(data.banner_id);
-            }
-
-            if (data.slider_id) {
-                this.sliderId(data.slider_id);
-            }
-
-            if (data.breakpoints && data.breakpoints.length > 0 && !this.activeBreakpoint()) {
-                this.setActiveBreakpoint(data.breakpoints[0]);
-            }
-        },
-
-        /**
-         * Load breakpoint images from crops data
-         *
-         * @param {Object} crops
-         */
-        loadBreakpointImagesFromCrops: function (crops) {
-            var images = {};
-
-            Object.keys(crops).forEach(function (breakpointId) {
-                var cropData = crops[breakpointId];
-                if (cropData.custom_source_image && cropData.custom_source_image_url) {
-                    images[breakpointId] = {
-                        file: cropData.custom_source_image,
-                        url: cropData.custom_source_image_url
-                    };
-                }
-            });
-
-            this.breakpointImages(images);
-        },
-
-        /**
-         * Handle slider change
-         *
-         * @param {Number} sliderId
+         * @param {String|Number} sliderId
+         * @returns {void}
          */
         onSliderChange: function (sliderId) {
-            if (!sliderId || sliderId === this.sliderId()) {
+            var request;
+
+            if (!this.ready || !sliderId || String(sliderId) === String(this.loadedSliderId)) {
                 return;
             }
-
-            this.sliderId(sliderId);
-            this.loadBreakpointsForSlider(sliderId);
+            this.loadedSliderId = sliderId;
+            request = ++this.breakpointsRequest;
+            this.runBusy(
+                $t('Loading the breakpoints of the slider...'),
+                this.http.getJson(this.settings.breakpointsUrl, {slider_id: sliderId})
+            ).then(function (answer) {
+                if (request === this.breakpointsRequest) {
+                    this.showStates(answer && answer.breakpoints, false);
+                }
+            }.bind(this), function (error) {
+                if (request === this.breakpointsRequest) {
+                    this.showStates([], false);
+                    messages.failure($t('The breakpoints of the selected slider could not be loaded.'), error);
+                }
+            }.bind(this));
         },
 
         /**
-         * Load breakpoints for a slider via AJAX
+         * Crops cut from the banner image start over when it is replaced or removed
          *
-         * @param {Number} sliderId
+         * @returns {void}
          */
-        loadBreakpointsForSlider: function (sliderId) {
-            var self = this;
-            var url = this.saveUrl.replace('/save', '/breakpoints');
+        onBannerImageChange: function () {
+            var reset;
 
-            ajaxService.loadBreakpoints(url, sliderId)
-                .then(function (response) {
-                    if (response.breakpoints) {
-                        self.breakpoints(response.breakpoints);
-                        if (response.breakpoints.length > 0) {
-                            self.setActiveBreakpoint(response.breakpoints[0]);
-                        }
-                    }
-                })
-                .catch(function () {});
-        },
-
-        /**
-         * Update crops data from server response
-         *
-         * @param {Object} cropsResponse
-         */
-        updateCropsFromResponse: function (cropsResponse) {
-            var self = this;
-
-            $.each(cropsResponse, function (breakpointId, images) {
-                var cropData = self.getCropData(breakpointId) || {};
-                var updated = self.updateCropDataFromResponse(cropData, images, false);
-                self.setCropData(breakpointId, updated);
-                self.refreshComparison(breakpointId);
-            });
-        },
-
-        // ==================== QUALITY & TOGGLE METHODS ====================
-
-        /**
-         * Toggle WebP generation
-         *
-         * @param {Object} breakpoint
-         */
-        toggleWebP: function (breakpoint) {
-            var cropData = this.getCropData(breakpoint.breakpoint_id);
-            cropData.generate_webp = cropData.generate_webp === false;
-            this.setCropData(breakpoint.breakpoint_id, cropData);
-            this.autoSave();
-        },
-
-        /**
-         * Toggle AVIF generation
-         *
-         * @param {Object} breakpoint
-         */
-        toggleAvif: function (breakpoint) {
-            var cropData = this.getCropData(breakpoint.breakpoint_id);
-            cropData.generate_avif = cropData.generate_avif !== true;
-            this.setCropData(breakpoint.breakpoint_id, cropData);
-            this.autoSave();
-        },
-
-        /**
-         * Update WebP quality
-         *
-         * @param {Object} breakpoint
-         * @param {Object} data
-         * @param {Object} event
-         */
-        updateWebpQuality: function (breakpoint, data, event) {
-            var value = parseInt(event.target.value, 10) || config.WEBP_QUALITY_DEFAULT;
-            var cropData = this.getCropData(breakpoint.breakpoint_id);
-            cropData.webp_quality = value;
-            this.setCropData(breakpoint.breakpoint_id, cropData, true);
-            this.syncQualityInputs(event.target, value);
-            this.autoSave();
-        },
-
-        /**
-         * Update AVIF quality
-         *
-         * @param {Object} breakpoint
-         * @param {Object} data
-         * @param {Object} event
-         */
-        updateAvifQuality: function (breakpoint, data, event) {
-            var value = parseInt(event.target.value, 10) || config.AVIF_QUALITY_DEFAULT;
-            var cropData = this.getCropData(breakpoint.breakpoint_id);
-            cropData.avif_quality = value;
-            this.setCropData(breakpoint.breakpoint_id, cropData, true);
-            this.syncQualityInputs(event.target, value);
-            this.autoSave();
-        },
-
-        /**
-         * Sync quality slider and number input values
-         *
-         * @param {HTMLElement} sourceElement
-         * @param {Number} value
-         */
-        syncQualityInputs: function (sourceElement, value) {
-            var container = sourceElement.closest('.quality-slider');
-            if (!container) {
+            if (!this.ready) {
                 return;
             }
-
-            var rangeInput = container.querySelector('input[type="range"]');
-            var numberInput = container.querySelector('input[type="number"]');
-
-            if (rangeInput && rangeInput !== sourceElement) {
-                rangeInput.value = value;
-            }
-
-            if (numberInput && numberInput !== sourceElement) {
-                numberInput.value = value;
-            }
-        },
-
-        // ==================== COMPARISON & PREVIEW METHODS ====================
-
-        /**
-         * Subscribe to comparison toggle
-         */
-        subscribeToComparisonToggle: function () {
-            var self = this;
-
-            this.showComparison.subscribe(function (isVisible) {
-                if (!isVisible) {
-                    return;
-                }
-
-                var breakpoint = self.activeBreakpoint();
-                if (!breakpoint) {
-                    return;
-                }
-
-                var cropData = self.getCropData(breakpoint.breakpoint_id);
-                if (cropData && cropData.cropped_image_url && !cropData.original_size) {
-                    self.fetchImageSizes(breakpoint.breakpoint_id);
-                }
-            });
-        },
-
-        /**
-         * Set comparison mode
-         *
-         * @param {String} mode
-         */
-        setComparisonMode: function (mode) {
-            this.comparisonMode(mode);
-        },
-
-        /**
-         * Refresh comparison section
-         *
-         * @param {Number} breakpointId
-         */
-        refreshComparison: function (breakpointId) {
-            this.fetchImageSizes(breakpointId);
-        },
-
-        /**
-         * Fetch all image sizes for a breakpoint
-         *
-         * @param {Number} breakpointId
-         */
-        fetchImageSizes: function (breakpointId) {
-            var self = this;
-            var existingData = this.getCropData(breakpointId);
-
-            if (!existingData || !existingData.cropped_image_url) {
-                return;
-            }
-
-            Promise.all([
-                fileUtils.fetchFileSize(existingData.cropped_image_url),
-                fileUtils.fetchFileSize(existingData.webp_image_url),
-                fileUtils.fetchFileSize(existingData.avif_image_url)
-            ]).then(function (sizes) {
-                var cropData = Object.assign({}, self.getCropData(breakpointId));
-                cropData.original_size = sizes[0];
-                cropData.webp_size = sizes[1];
-                cropData.avif_size = sizes[2];
-                self.setCropData(breakpointId, cropData);
-            });
-        },
-
-        /**
-         * Generate live preview when quality changes
-         *
-         * @param {Object} breakpoint
-         * @param {String} format
-         */
-        generateLivePreview: function (breakpoint, format) {
-            var self = this;
-
-            if (!this.useBrowserCompression || !this.cropperManager.isInitialized()) {
-                return;
-            }
-
-            var cropData = this.getCropData(breakpoint.breakpoint_id);
-            var quality = format === 'webp'
-                ? (cropData.webp_quality || config.WEBP_QUALITY_DEFAULT)
-                : (cropData.avif_quality || config.AVIF_QUALITY_DEFAULT);
-
-            var targetWidth = breakpoint.target_width;
-            var cropWidth = cropData.crop_width || 0;
-            var cropHeight = cropData.crop_height || 0;
-
-            // Calculate target height based on crop aspect ratio to avoid image stretching
-            var targetHeight = (cropWidth > 0 && cropHeight > 0)
-                ? Math.round(targetWidth * cropHeight / cropWidth)
-                : breakpoint.target_height;
-
-            var canvas = this.cropperManager.getCroppedCanvas(targetWidth, targetHeight);
-
-            if (!canvas) {
-                return;
-            }
-
-            var compressPromise = format === 'webp'
-                ? imageCompressor.compressToWebP(canvas, quality)
-                : imageCompressor.compressToAvif(canvas, quality);
-
-            compressPromise.then(function (result) {
-                var previews = self.previewUrls() || {};
-
-                if (previews[format]) {
-                    imageCompressor.revokePreviewUrl(previews[format].url);
-                }
-
-                previews[format] = {
-                    url: imageCompressor.createPreviewUrl(result),
-                    size: result.size,
-                    formattedSize: imageCompressor.formatFileSize(result.size)
-                };
-
-                self.previewUrls(previews);
-            }).catch(function () {});
-        },
-
-        /**
-         * Clear preview URLs
-         */
-        clearPreviews: function () {
-            var previews = this.previewUrls() || {};
-
-            Object.keys(previews).forEach(function (format) {
-                if (previews[format] && previews[format].url) {
-                    imageCompressor.revokePreviewUrl(previews[format].url);
-                }
-            });
-
-            this.previewUrls({});
-        },
-
-        // ==================== UPLOAD METHODS ====================
-
-        /**
-         * Trigger file input click for breakpoint image upload
-         *
-         * @param {Object} breakpoint
-         */
-        triggerBreakpointImageUpload: function (breakpoint) {
-            var input = document.getElementById('breakpoint-image-upload-' + breakpoint.breakpoint_id);
-            if (input) {
-                input.click();
+            reset = this.model.setBannerImage(this.bannerImage);
+            if (reset.length) {
+                this.detachCropper();
+                reset.forEach(function (state) {
+                    this.clearPreview(state.id);
+                }, this);
+                this.touch();
             }
         },
 
         /**
-         * Handle breakpoint image file selection
+         * @param {{id: Number}} tab
+         * @returns {void}
+         */
+        selectTab: function (tab) {
+            this.detachCropper();
+            this.activeId(tab.id);
+        },
+
+        /**
+         * Put the crop box on the active crop's source image once it has loaded
          *
-         * @param {Object} breakpoint
          * @param {Object} data
          * @param {Event} event
+         * @returns {void}
          */
-        handleBreakpointImageUpload: function (breakpoint, data, event) {
-            var self = this;
-            var input = event.target;
-            var file = input.files && input.files[0];
+        attachCropper: function (data, event) {
+            var state = this.active();
 
-            if (!file) {
-                return;
-            }
-
-            var validation = fileUtils.validateImageFile(file);
-
-            if (!validation.valid) {
-                ajaxService.showError(validation.error);
-                input.value = '';
-                return;
-            }
-
-            self.isUploading(true);
-
-            var formData = new FormData();
-            formData.append('breakpoint_image', file);
-            formData.append('breakpoint_id', breakpoint.breakpoint_id);
-            formData.append('banner_id', self.bannerId() || 0);
-
-            ajaxService.uploadBreakpointImage(self.uploadBreakpointImageUrl, formData)
-                .then(function (response) {
-                    self.isUploading(false);
-                    input.value = '';
-
-                    self.setBreakpointImage(breakpoint.breakpoint_id, {
-                        url: response.url,
-                        file: response.file
-                    });
-
-                    self.destroyCropper();
-                    self.autoSave();
-                })
-                .catch(function (error) {
-                    self.isUploading(false);
-                    input.value = '';
-                    ajaxService.showError(error.message);
+            this.detachCropper();
+            if (state) {
+                this.cropBox = cropperAdapter.attach(event.target, {
+                    target: state.target,
+                    rect: state.rect,
+                    onChange: function (rect) {
+                        state.rect = rect;
+                        this.touch();
+                    }.bind(this)
                 });
+            }
         },
 
-        // ==================== UTILITY METHODS ====================
-
         /**
-         * Check browser compression support
+         * @returns {void}
          */
-        checkBrowserCompressionSupport: function () {
-            this.useBrowserCompression = imageCompressor.isWasmSupported();
+        detachCropper: function () {
+            if (this.cropBox) {
+                this.cropBox.destroy();
+                this.cropBox = null;
+            }
         },
 
         /**
-         * Format file size
+         * Apply a change to the active crop and refresh the view
          *
-         * @param {Number} bytes
-         * @returns {String}
+         * @param {function(Object): void} change
+         * @returns {Boolean} True, so a bound checkbox keeps its default action
          */
-        formatFileSize: function (bytes) {
-            return fileUtils.formatFileSize(bytes);
+        editActive: function (change) {
+            var state = this.active();
+
+            if (state) {
+                change.call(this, state);
+                this.touch();
+            }
+
+            return true;
         },
 
         /**
-         * Calculate savings percentage
-         *
-         * @param {Number} originalSize
-         * @param {Number} optimizedSize
-         * @returns {String}
+         * @param {Object} data
+         * @param {Event} event
+         * @returns {Boolean}
          */
-        calculateSavings: function (originalSize, optimizedSize) {
-            return fileUtils.calculateSavings(originalSize, optimizedSize);
+        toggleEnabled: function (data, event) {
+            return this.editActive(function (state) {
+                state.enabled = event.target.checked;
+            });
+        },
+
+        /**
+         * Mark the active crop for removal on save, or take that back
+         *
+         * @param {Boolean} removed
+         * @returns {void}
+         */
+        setRemoved: function (removed) {
+            this.detachCropper();
+            this.editActive(function (state) {
+                state.remove = removed;
+            });
+        },
+
+        /**
+         * Give the active crop another source image; null cuts it from the banner image again
+         *
+         * @param {Object} state
+         * @param {String|null} path
+         * @param {String|null} url
+         * @param {Object|null} size
+         * @returns {void}
+         */
+        changeSource: function (state, path, url, size) {
+            this.detachCropper();
+            this.model.setSource(state, path, url, size);
+            this.clearPreview(state.id);
+            this.touch();
+        },
+
+        /**
+         * @returns {void}
+         */
+        useBannerImage: function () {
+            if (this.active()) {
+                this.changeSource(this.active(), null, null, null);
+            }
+        },
+
+        /**
+         * Upload the chosen file as the active crop's own source image
+         *
+         * @param {Object} data
+         * @param {Event} event
+         * @returns {void}
+         */
+        uploadOwnImage: function (data, event) {
+            var file = event.target.files && event.target.files[0],
+                state = this.active(),
+                limit = this.settings.maxUploadBytes,
+                body = new FormData();
+
+            event.target.value = '';
+            if (!file || !state) {
+                return;
+            }
+            if (this.allowedImageTypes.indexOf(file.type) === -1) {
+                messages.show([$t('Choose a JPEG, PNG, GIF, WebP or AVIF image.')]);
+
+                return;
+            }
+            if (limit > 0 && file.size > limit) {
+                messages.show([$t('The image is larger than %1.').replace('%1', fileSize.format(limit))]);
+
+                return;
+            }
+            body.append(this.settings.imageUploadField, file, file.name);
+            this.runBusy($t('Uploading the image...'), this.http.postForm(this.settings.imageUploadUrl, body))
+                .then(function (answer) {
+                    var failed = !answer || answer.error || !answer.file || !answer.url;
+
+                    if (failed) {
+                        messages.show([answer && answer.error ? answer.error : $t('The image could not be uploaded.')]);
+
+                        return;
+                    }
+                    this.changeSource(state, String(answer.file), String(answer.url),
+                        answer.width > 0 && answer.height > 0 ? {width: answer.width, height: answer.height} : null);
+                }.bind(this), function (error) {
+                    messages.failure($t('The image could not be uploaded.'), error);
+                }.bind(this));
+        },
+
+        /**
+         * Encode the active crop in the browser and compare it with its fallback image
+         *
+         * @returns {void}
+         */
+        previewActive: function () {
+            var state = this.active();
+
+            if (!state || this.busyText()) {
+                return;
+            }
+            this.runBusy(
+                $t('Preparing the preview...'),
+                cropEncoding.prepareCrop(state, this.model.sourceOf(state), this.encoding)
+            ).then(function (result) {
+                var previews = Object.assign({}, this.previews());
+
+                if (!result.loadError) {
+                    view.releasePreview(previews[state.id]);
+                    previews[state.id] = view.preview(result);
+                    this.previews(previews);
+                }
+                messages.notices(cropSubmission.encodingNotices(state, result), this.model.nameOf);
+            }.bind(this), function (error) {
+                messages.failure($t('The preview could not be prepared.'), error);
+            });
+        },
+
+        /**
+         * Drop a crop's preview and free its images
+         *
+         * @param {Number} id
+         * @returns {void}
+         */
+        clearPreview: function (id) {
+            var previews = Object.assign({}, this.previews());
+
+            if (previews[id]) {
+                view.releasePreview(previews[id]);
+                delete previews[id];
+                this.previews(previews);
+            }
+        },
+
+        /**
+         * "Save": prepare the changed crops, then submit the form
+         *
+         * @returns {void}
+         */
+        submitForm: function () {
+            this.submit({});
+        },
+
+        /**
+         * "Save and Continue Edit": prepare the changed crops, then submit the form and come back to it
+         *
+         * @returns {void}
+         */
+        submitFormAndContinue: function () {
+            this.submit({back: 'edit'});
+        },
+
+        /**
+         * Prepare the changed crops, put them in the form data and submit the form
+         *
+         * An invalid form is submitted at once, so the form shows its errors and nothing is encoded in vain.
+         *
+         * @param {Object} params Extra request parameters
+         * @returns {void}
+         */
+        submit: function (params) {
+            var form = this.form(),
+                save = function () {
+                    form.save(true, params);
+                };
+
+            if (!form || this.busyText()) {
+                return;
+            }
+            form.validate();
+            if (form.additionalInvalid || this.source().get('params.invalid')) {
+                save();
+
+                return;
+            }
+            this.runBusy($t('Preparing the responsive images...'), cropSubmission.collect(this.model.states, {
+                tracker: this.model.tracker,
+                bannerPath: this.model.banner.path,
+                sourceOf: this.model.sourceOf,
+                encoding: this.encoding
+            })).then(function (collected) {
+                var post = cropSubmission.fit(collected, {
+                    maxPostBytes: this.settings.maxPostBytes,
+                    maxUploadBytes: this.settings.maxUploadBytes,
+                    otherBytes: payload.formBytes(this.source().get('data'), 'responsive_crops')
+                });
+
+                if (!post.fits) {
+                    messages.show([$t('The form is too large to send. Shorten the custom content and try again.')]);
+
+                    return;
+                }
+                this.source().set('data.responsive_crops', JSON.stringify(post.entries));
+                messages.notices(post.notices, this.model.nameOf, save);
+            }.bind(this), function (error) {
+                messages.failure($t('The responsive images could not be prepared.'), error);
+            });
+        },
+
+        /**
+         * Show the busy overlay with the given text until the promise settles
+         *
+         * @param {String} text
+         * @param {Promise} promise
+         * @returns {Promise}
+         */
+        runBusy: function (text, promise) {
+            var idle = this.busyText.bind(this, '');
+
+            this.busyText(text);
+
+            return promise.then(function (value) {
+                idle();
+
+                return value;
+            }, function (error) {
+                idle();
+                throw error;
+            });
         }
     });
 });

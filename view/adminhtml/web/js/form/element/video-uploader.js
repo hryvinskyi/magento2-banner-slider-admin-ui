@@ -1,81 +1,34 @@
 /**
- * Copyright (c) 2025. Volodymyr Hryvinskyi. All rights reserved.
- * @author: <mailto:volodymyr@hryvinskyi.com>
+ * Copyright (c) 2026. Volodymyr Hryvinskyi. All rights reserved.
+ * Author: Volodymyr Hryvinskyi <volodymyr@hryvinskyi.com>
+ * GitHub: https://github.com/hryvinskyi
  */
 
+/**
+ * The banner's local video uploader: previews the file as a video in the banner's aspect ratio (the preset, or the
+ * custom ratio while the select is on its custom choice). The accepted file types and the size limit come from the
+ * form, the same ones the server enforces.
+ */
 define([
-    'jquery',
     'Magento_Ui/js/form/element/image-uploader',
-    'ko'
-], function ($, ImageUploader, ko) {
+    'ko',
+    'Hryvinskyi_BannerSliderAdminUi/js/validation/value-rules',
+    'Hryvinskyi_BannerSliderAdminUi/js/cropper/file-size'
+], function (ImageUploader, ko, valueRules, fileSize) {
     'use strict';
+
+    var VIDEO_TYPES = {mp4: 'video/mp4', m4v: 'video/x-m4v', webm: 'video/webm'};
 
     return ImageUploader.extend({
         defaults: {
             previewTmpl: 'Hryvinskyi_BannerSliderAdminUi/form/element/uploader/video-preview',
-            allowedExtensions: 'mp4 webm',
-            maxFileSize: 104857600,
-            isVideoFile: true,
-            aspectRatio: '16:9',
+            customChoice: 'custom',
+            aspectRatioChoice: '',
+            customAspectRatio: '',
             imports: {
-                aspectRatio: '${ $.provider }:data.video_aspect_ratio'
-            },
-            listens: {
-                aspectRatio: 'onAspectRatioChange'
+                aspectRatioChoice: '${ $.provider }:data.video_aspect_ratio',
+                customAspectRatio: '${ $.provider }:data.video_custom_aspect_ratio'
             }
-        },
-
-        /**
-         * @inheritdoc
-         */
-        initialize: function () {
-            this._super();
-            this.isVideoFile = true;
-            this.aspectRatioStyle = ko.observable(this.getAspectRatioStyle());
-            return this;
-        },
-
-        /**
-         * @inheritdoc
-         */
-        setInitialValue: function () {
-            var value = this.getInitialValue(),
-                self = this;
-
-            // Ensure value is always an array
-            if (!Array.isArray(value)) {
-                value = value ? [value] : [];
-            }
-
-            // Convert string values to file objects
-            value = value.map(function (item) {
-                if (typeof item === 'string') {
-                    var ext = item.split('.').pop().toLowerCase(),
-                        mimeTypes = {
-                            'mp4': 'video/mp4',
-                            'webm': 'video/webm',
-                            'ogg': 'video/ogg',
-                            'mov': 'video/quicktime'
-                        };
-
-                    return {
-                        name: item,
-                        type: mimeTypes[ext] || 'video/mp4',
-                        previewType: 'video'
-                    };
-                }
-
-                return item;
-            });
-
-            value = value.map(this.processFile, this);
-
-            this.initialValue = value.slice();
-            this.value(value);
-            this.on('value', this.onUpdate.bind(this));
-            this.isUseDefault(this.disabled());
-
-            return this;
         },
 
         /**
@@ -83,172 +36,71 @@ define([
          */
         initObservable: function () {
             this._super();
-            this.observe(['aspectRatio']);
+            this.observe(['aspectRatioChoice', 'customAspectRatio']);
+
+            /**
+             * The CSS aspect ratio of the preview (`16 / 9`); empty while the chosen ratio is not valid
+             */
+            this.aspectRatioStyle = ko.pureComputed(function () {
+                var choice = this.aspectRatioChoice(),
+                    text = choice === this.customChoice ? this.customAspectRatio() : choice,
+                    ratio = valueRules.parseAspectRatio(text);
+
+                return ratio ? ratio.width + ' / ' + ratio.height : '';
+            }, this);
+
             return this;
         },
 
         /**
-         * Handle aspect ratio change
-         *
-         * @param {String} value
-         */
-        onAspectRatioChange: function (value) {
-            if (value) {
-                this.aspectRatio(value);
-
-                if (typeof this.aspectRatioStyle === 'function') {
-                    this.aspectRatioStyle(this.getAspectRatioStyle());
-                }
-            }
-        },
-
-        /**
-         * Validate if aspect ratio format is valid
-         *
-         * @param {String} ratio
-         * @returns {Boolean}
-         */
-        isValidAspectRatio: function (ratio) {
-            if (!ratio || typeof ratio !== 'string') {
-                return false;
-            }
-
-            var parts = ratio.split(':');
-
-            if (parts.length !== 2) {
-                return false;
-            }
-
-            var width = parseFloat(parts[0]);
-            var height = parseFloat(parts[1]);
-
-            return !isNaN(width) && !isNaN(height) && width > 0 && height > 0;
-        },
-
-        /**
-         * Get CSS aspect-ratio style value
+         * Every file of this uploader previews as a video
          *
          * @returns {String}
          */
-        getAspectRatioStyle: function () {
-            var ratio = this.aspectRatio() || this.aspectRatio || '16:9';
-
-            if (typeof ratio === 'function') {
-                ratio = ratio();
-            }
-
-            if (!this.isValidAspectRatio(ratio)) {
-                ratio = '16:9';
-            }
-
-            return ratio.replace(':', ' / ');
-        },
-
-        /**
-         * Get aspect ratio as CSS property for inline style
-         *
-         * @returns {String}
-         */
-        getAspectRatioCss: function () {
-            return 'aspect-ratio: ' + this.getAspectRatioStyle() + ';';
-        },
-
-        /**
-         * Get preview type for the file
-         *
-         * @param {Object} file
-         * @returns {String}
-         */
-        getFilePreviewType: function (file) {
+        getFilePreviewType: function () {
             return 'video';
         },
 
         /**
-         * Get preview template based on file type
-         *
-         * @param {Object} file
          * @returns {String}
          */
-        getPreviewTmpl: function (file) {
+        getPreviewTmpl: function () {
             return this.previewTmpl;
         },
 
         /**
-         * Check if file is a video
+         * The MIME type of a video file, from its type or else its extension; null when it is not MP4, M4V or WebM
          *
-         * @param {Object} file
-         * @returns {Boolean}
-         */
-        isVideo: function (file) {
-            var ext = this.getFileExtension(file);
-            return ['mp4', 'webm', 'ogg', 'mov'].indexOf(ext.toLowerCase()) !== -1;
-        },
-
-        /**
-         * Get file extension
-         *
-         * @param {Object} file
-         * @returns {String}
-         */
-        getFileExtension: function (file) {
-            var name = file.name || file.file || '';
-            return name.split('.').pop();
-        },
-
-        /**
-         * Get video MIME type based on extension
-         *
-         * @param {Object} file
-         * @returns {String}
+         * @param {{type: (String|undefined), name: (String|undefined), file: (String|undefined)}} file
+         * @returns {String|null}
          */
         getVideoMimeType: function (file) {
-            var ext = this.getFileExtension(file).toLowerCase();
-            var mimeTypes = {
-                'mp4': 'video/mp4',
-                'webm': 'video/webm',
-                'ogg': 'video/ogg',
-                'mov': 'video/quicktime'
-            };
-            return mimeTypes[ext] || 'video/mp4';
+            var name = String(file.name || file.file || ''),
+                extension = name.slice(name.lastIndexOf('.') + 1).toLowerCase(),
+                known = Object.keys(VIDEO_TYPES).map(function (key) {
+                    return VIDEO_TYPES[key];
+                });
+
+            if (known.indexOf(file.type) !== -1) {
+                return file.type;
+            }
+
+            return Object.prototype.hasOwnProperty.call(VIDEO_TYPES, extension) ? VIDEO_TYPES[extension] : null;
         },
 
         /**
-         * @inheritdoc
-         */
-        onPreviewLoad: function () {
-            // Video doesn't need the same preview load handling as images
-        },
-
-        /**
-         * Format file size for display
+         * A video has no image preview to measure
          *
+         * @returns {void}
+         */
+        onPreviewLoad: function () {},
+
+        /**
          * @param {Number} bytes
          * @returns {String}
          */
         formatSize: function (bytes) {
-            if (!bytes) {
-                return '0 B';
-            }
-
-            var units = ['B', 'KB', 'MB', 'GB'];
-            var i = 0;
-
-            while (bytes >= 1024 && i < units.length - 1) {
-                bytes /= 1024;
-                i++;
-            }
-
-            return bytes.toFixed(bytes < 10 && i > 0 ? 1 : 0) + ' ' + units[i];
-        },
-
-        /**
-         * Get allowed file extensions in comma delimited format
-         *
-         * @returns {String}
-         */
-        getAllowedFileExtensionsInCommaDelimitedFormat: function () {
-            var allowed = this.allowedExtensions || 'mp4 webm';
-            return allowed.toUpperCase().split(' ').join(', ');
+            return fileSize.format(bytes);
         }
     });
 });

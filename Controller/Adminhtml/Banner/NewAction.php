@@ -10,36 +10,36 @@ declare(strict_types=1);
 namespace Hryvinskyi\BannerSliderAdminUi\Controller\Adminhtml\Banner;
 
 use Magento\Backend\App\Action;
+use Magento\Backend\App\Action\Context;
 use Magento\Framework\App\Action\HttpGetActionInterface;
-use Magento\Framework\Controller\Result\Forward;
 use Magento\Framework\Controller\Result\ForwardFactory;
+use Magento\Framework\Controller\ResultInterface;
 
 /**
- * New banner controller
+ * The form for a new banner: the edit page without an id.
  */
 class NewAction extends Action implements HttpGetActionInterface
 {
     public const ADMIN_RESOURCE = 'Hryvinskyi_BannerSlider::banner_save';
 
     /**
-     * @param Action\Context $context
+     * @param Context $context
      * @param ForwardFactory $resultForwardFactory
      */
     public function __construct(
-        Action\Context $context,
+        Context $context,
         private readonly ForwardFactory $resultForwardFactory
     ) {
         parent::__construct($context);
     }
 
     /**
-     * Execute action
+     * Forward to the edit action
      *
-     * @return Forward
+     * @return ResultInterface
      */
-    public function execute(): Forward
+    public function execute(): ResultInterface
     {
-        $resultForward = $this->resultForwardFactory->create();
-        return $resultForward->forward('edit');
+        return $this->resultForwardFactory->create()->forward('edit');
     }
 }

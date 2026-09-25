@@ -1,8 +1,11 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!--
-  ~ Copyright (c) 2025. Volodymyr Hryvinskyi. All rights reserved.
-  ~ @author: <mailto:volodymyr@hryvinskyi.com>
-  -->
+/**
+ * Copyright (c) 2026. Volodymyr Hryvinskyi. All rights reserved.
+ * Author: Volodymyr Hryvinskyi <volodymyr@hryvinskyi.com>
+ * GitHub: https://github.com/hryvinskyi
+ */
+-->
 <form xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
       xsi:noNamespaceSchemaLocation="urn:magento:module:Magento_Ui:etc/ui_configuration.xsd">
     <argument name="data" xsi:type="array">
@@ -85,9 +88,12 @@
         </field>
         <field name="location" formElement="input">
             <settings>
+                <validation>
+                    <rule name="validate-hbs-location" xsi:type="boolean">true</rule>
+                </validation>
                 <dataType>text</dataType>
                 <label translate="true">Location</label>
-                <notice translate="true">Unique identifier for widget placement</notice>
+                <notice translate="true">Code themes and widgets place the slider by: letters, digits, "_" and "-". Sliders sharing a location show the one with the lowest priority value.</notice>
             </settings>
         </field>
         <field name="priority" formElement="input">
@@ -116,7 +122,7 @@
             <formElements>
                 <multiselect>
                     <settings>
-                        <options class="Magento\Cms\Ui\Component\Listing\Column\Cms\Options"/>
+                        <options class="Hryvinskyi\BannerSliderAdminUi\Ui\Component\Form\StoreViewOptions"/>
                     </settings>
                 </multiselect>
             </formElements>
@@ -128,6 +134,7 @@
                 </validation>
                 <dataType>int</dataType>
                 <label translate="true">Customer Groups</label>
+                <notice translate="true">"ALL GROUPS" shows the slider to every customer group, including groups created later.</notice>
             </settings>
             <formElements>
                 <multiselect>
@@ -140,43 +147,31 @@
         <field name="from_date" formElement="date">
             <argument name="data" xsi:type="array">
                 <item name="config" xsi:type="array">
-                    <item name="dataType" xsi:type="string">string</item>
-                    <item name="label" xsi:type="string" translate="true">From</item>
-                    <item name="formElement" xsi:type="string">date</item>
-                    <item name="source" xsi:type="string">slider</item>
-                    <item name="dataScope" xsi:type="string">from_date</item>
                     <item name="options" xsi:type="array">
-                        <item name="dateFormat" xsi:type="string">yyyy-MM-dd</item>
-                        <item name="timeFormat" xsi:type="string">HH:mm:ss</item>
+                        <item name="timeFormat" xsi:type="string">HH:mm</item>
                         <item name="showsTime" xsi:type="boolean">true</item>
                     </item>
                 </item>
             </argument>
             <settings>
-                <validation>
-                    <rule name="validate-optional-datetime" xsi:type="boolean">true</rule>
-                </validation>
+                <dataType>text</dataType>
+                <label translate="true">From</label>
+                <notice translate="true">In the store's time zone. Leave empty to show the slider from now on.</notice>
             </settings>
         </field>
         <field name="to_date" formElement="date">
             <argument name="data" xsi:type="array">
                 <item name="config" xsi:type="array">
-                    <item name="dataType" xsi:type="string">string</item>
-                    <item name="label" xsi:type="string" translate="true">To</item>
-                    <item name="formElement" xsi:type="string">date</item>
-                    <item name="source" xsi:type="string">slider</item>
-                    <item name="dataScope" xsi:type="string">to_date</item>
                     <item name="options" xsi:type="array">
-                        <item name="dateFormat" xsi:type="string">yyyy-MM-dd</item>
-                        <item name="timeFormat" xsi:type="string">HH:mm:ss</item>
+                        <item name="timeFormat" xsi:type="string">HH:mm</item>
                         <item name="showsTime" xsi:type="boolean">true</item>
                     </item>
                 </item>
             </argument>
             <settings>
-                <validation>
-                    <rule name="validate-optional-datetime" xsi:type="boolean">true</rule>
-                </validation>
+                <dataType>text</dataType>
+                <label translate="true">To</label>
+                <notice translate="true">In the store's time zone. Leave empty to show the slider without an end.</notice>
             </settings>
         </field>
     </fieldset>
@@ -193,7 +188,7 @@
             <formElements>
                 <select>
                     <settings>
-                        <options class="Hryvinskyi\BannerSliderAdminUi\Model\Source\Effect"/>
+                        <options class="Hryvinskyi\BannerSlider\Model\Source\SlideEffectOptions"/>
                     </settings>
                 </select>
             </formElements>
@@ -232,6 +227,7 @@
                 </validation>
                 <dataType>number</dataType>
                 <label translate="true">Autoplay Timeout (ms)</label>
+                <notice translate="true">At least 1000 ms.</notice>
             </settings>
         </field>
         <field name="loop" formElement="checkbox">
@@ -372,6 +368,93 @@
             </formElements>
         </field>
     </fieldset>
+    <fieldset name="responsive_items_settings">
+        <settings>
+            <label translate="true">Slides per Page</label>
+            <collapsible>true</collapsible>
+        </settings>
+        <field name="responsive_items_submitted" formElement="hidden">
+            <argument name="data" xsi:type="array">
+                <item name="config" xsi:type="array">
+                    <item name="default" xsi:type="string">1</item>
+                </item>
+            </argument>
+            <settings>
+                <dataType>text</dataType>
+            </settings>
+        </field>
+        <container name="responsive_items_container" component="Magento_Ui/js/dynamic-rows/dynamic-rows"
+                   template="ui/dynamic-rows/templates/default">
+            <argument name="data" xsi:type="array">
+                <item name="config" xsi:type="array">
+                    <item name="addButtonLabel" xsi:type="string" translate="true">Add Rule</item>
+                    <item name="additionalClasses" xsi:type="string">admin__field-wide</item>
+                    <item name="componentType" xsi:type="string">dynamicRows</item>
+                    <item name="deleteProperty" xsi:type="string">is_delete</item>
+                    <item name="defaultRecord" xsi:type="boolean">false</item>
+                    <item name="dataScope" xsi:type="string">responsive_items</item>
+                    <item name="label" xsi:type="string" translate="true">Rules</item>
+                    <item name="notice" xsi:type="string" translate="true">From each min width (px) upwards, show this many slides at once with this gap (for example 16px or 1rem). Without rules, one slide is shown.</item>
+                </item>
+            </argument>
+            <container name="record" component="Magento_Ui/js/dynamic-rows/record">
+                <argument name="data" xsi:type="array">
+                    <item name="config" xsi:type="array">
+                        <item name="isTemplate" xsi:type="boolean">true</item>
+                        <item name="is_collection" xsi:type="boolean">true</item>
+                        <item name="componentType" xsi:type="string">container</item>
+                    </item>
+                </argument>
+                <field name="min_width" formElement="input">
+                    <argument name="data" xsi:type="array">
+                        <item name="config" xsi:type="array">
+                            <item name="default" xsi:type="number">0</item>
+                        </item>
+                    </argument>
+                    <settings>
+                        <validation>
+                            <rule name="required-entry" xsi:type="boolean">true</rule>
+                            <rule name="validate-digits" xsi:type="boolean">true</rule>
+                        </validation>
+                        <dataType>number</dataType>
+                        <label translate="true">Min Width</label>
+                    </settings>
+                </field>
+                <field name="per_page" formElement="input">
+                    <argument name="data" xsi:type="array">
+                        <item name="config" xsi:type="array">
+                            <item name="default" xsi:type="number">1</item>
+                        </item>
+                    </argument>
+                    <settings>
+                        <validation>
+                            <rule name="required-entry" xsi:type="boolean">true</rule>
+                            <rule name="validate-digits" xsi:type="boolean">true</rule>
+                            <rule name="validate-digits-range" xsi:type="string">1-10</rule>
+                        </validation>
+                        <dataType>number</dataType>
+                        <label translate="true">Slides per Page</label>
+                    </settings>
+                </field>
+                <field name="gap" formElement="input">
+                    <settings>
+                        <validation>
+                            <rule name="validate-hbs-css-length" xsi:type="boolean">true</rule>
+                        </validation>
+                        <dataType>text</dataType>
+                        <label translate="true">Gap</label>
+                    </settings>
+                </field>
+                <actionDelete template="Magento_Backend/dynamic-rows/cells/action-delete">
+                    <argument name="data" xsi:type="array">
+                        <item name="config" xsi:type="array">
+                            <item name="fit" xsi:type="boolean">false</item>
+                        </item>
+                    </argument>
+                </actionDelete>
+            </container>
+        </container>
+    </fieldset>
     <fieldset name="custom_styles">
         <settings>
             <label translate="true">Custom Styles</label>
@@ -393,7 +476,7 @@
             </argument>
             <settings>
                 <label translate="true">Custom CSS</label>
-                <notice translate="true">Add custom CSS styles for this slider. Use .banner-slider-{slider_id} as the root selector.</notice>
+                <notice translate="true">Add custom CSS styles for this slider. Use .banner-slider-{slider_id} as the root selector. The "&lt;" character is not allowed.</notice>
                 <dataType>text</dataType>
             </settings>
         </field>
@@ -403,6 +486,16 @@
             <label translate="true">Responsive Breakpoints</label>
             <collapsible>true</collapsible>
         </settings>
+        <field name="breakpoints_submitted" formElement="hidden">
+            <argument name="data" xsi:type="array">
+                <item name="config" xsi:type="array">
+                    <item name="default" xsi:type="string">1</item>
+                </item>
+            </argument>
+            <settings>
+                <dataType>text</dataType>
+            </settings>
+        </field>
         <container name="breakpoints_container" component="Magento_Ui/js/dynamic-rows/dynamic-rows"
                    template="ui/dynamic-rows/templates/default">
             <argument name="data" xsi:type="array">
@@ -414,6 +507,7 @@
                     <item name="identificationProperty" xsi:type="string">breakpoint_id</item>
                     <item name="defaultRecord" xsi:type="boolean">false</item>
                     <item name="dataScope" xsi:type="string">breakpoints</item>
+                    <item name="notice" xsi:type="string" translate="true">Removing every breakpoint of a new slider gives it the default Desktop, Tablet and Mobile breakpoints. Removing a breakpoint also removes the banner crops made for it.</item>
                 </item>
             </argument>
             <container name="record" component="Magento_Ui/js/dynamic-rows/record">
@@ -425,12 +519,6 @@
                     </item>
                 </argument>
                 <field name="breakpoint_id" formElement="input">
-                    <settings>
-                        <dataType>text</dataType>
-                        <visible>false</visible>
-                    </settings>
-                </field>
-                <field name="is_delete" formElement="input">
                     <settings>
                         <dataType>text</dataType>
                         <visible>false</visible>
@@ -458,13 +546,14 @@
                         <item name="config" xsi:type="array">
                             <item name="placeholder" xsi:type="string" translate="true">e.g., desktop</item>
                             <item name="tooltip" xsi:type="array">
-                                <item name="description" xsi:type="string" translate="true">Unique key used in image filenames (lowercase, no spaces)</item>
+                                <item name="description" xsi:type="string" translate="true">Unique within the slider and used in crop file names: up to 50 lowercase letters, digits, "_" or "-", starting with a letter or digit.</item>
                             </item>
                         </item>
                     </argument>
                     <settings>
                         <validation>
                             <rule name="required-entry" xsi:type="boolean">true</rule>
+                            <rule name="validate-hbs-identifier" xsi:type="boolean">true</rule>
                         </validation>
                         <dataType>text</dataType>
                         <label translate="true">Identifier</label>
@@ -518,6 +607,7 @@
                         <validation>
                             <rule name="required-entry" xsi:type="boolean">true</rule>
                             <rule name="validate-digits" xsi:type="boolean">true</rule>
+                            <rule name="validate-greater-than-zero" xsi:type="boolean">true</rule>
                         </validation>
                         <dataType>number</dataType>
                         <label translate="true">Target Width</label>
@@ -535,7 +625,6 @@
                     <settings>
                         <validation>
                             <rule name="validate-digits" xsi:type="boolean">true</rule>
-                            <rule name="required-entry" xsi:type="boolean">false</rule>
                         </validation>
                         <dataType>number</dataType>
                         <label translate="true">Target Height</label>
@@ -547,7 +636,7 @@
                             <item name="default" xsi:type="number">0</item>
                             <item name="placeholder" xsi:type="string" translate="true">e.g., 10</item>
                             <item name="tooltip" xsi:type="array">
-                                <item name="description" xsi:type="string" translate="true">Display order in admin. Lower values appear first</item>
+                                <item name="description" xsi:type="string" translate="true">Order among breakpoints with the same min width. Lower values come first</item>
                             </item>
                         </item>
                     </argument>
@@ -559,7 +648,7 @@
                         <label translate="true">Sort Order</label>
                     </settings>
                 </field>
-                <field name="status" formElement="checkbox">
+                <field name="enabled" formElement="checkbox">
                     <argument name="data" xsi:type="array">
                         <item name="config" xsi:type="array">
                             <item name="default" xsi:type="number">1</item>

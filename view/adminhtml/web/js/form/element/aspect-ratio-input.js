@@ -4,67 +4,51 @@
  * GitHub: https://github.com/hryvinskyi
  */
 
+/**
+ * The custom video aspect ratio field: shown, and required, only while the aspect ratio select is on its custom
+ * choice (`imports.aspectRatioChoice` and `customChoice` come from the form). The value itself is checked by the
+ * `validate-hbs-aspect-ratio` rule, the same rule the server applies.
+ */
 define([
-    'Magento_Ui/js/form/element/abstract',
-    'mage/translate'
-], function (Abstract, $t) {
+    'Magento_Ui/js/form/element/abstract'
+], function (Abstract) {
     'use strict';
 
     return Abstract.extend({
         defaults: {
-            elementTmpl: 'ui/form/element/input'
-        },
-
-        /**
-         * Validate aspect ratio format
-         *
-         * @param {String} value
-         * @returns {Boolean}
-         */
-        isValidAspectRatio: function (value) {
-            if (!value || typeof value !== 'string') {
-                return true;
+            elementTmpl: 'ui/form/element/input',
+            customChoice: 'custom',
+            aspectRatioChoice: '',
+            listens: {
+                aspectRatioChoice: 'onChoiceChange'
             }
-
-            var parts = value.split(':');
-
-            if (parts.length !== 2) {
-                return false;
-            }
-
-            var width = parseFloat(parts[0]);
-            var height = parseFloat(parts[1]);
-
-            if (isNaN(width) || isNaN(height)) {
-                return false;
-            }
-
-            return width > 0 && height > 0;
         },
 
         /**
          * @inheritdoc
          */
-        validate: function () {
-            var value = this.value(),
-                result = this._super(),
-                isValid = true,
-                message = '';
+        initialize: function () {
+            this._super();
+            this.onChoiceChange(this.aspectRatioChoice);
 
-            if (this.visible() && value) {
-                isValid = this.isValidAspectRatio(value);
+            return this;
+        },
 
-                if (!isValid) {
-                    message = $t('Please enter a valid aspect ratio (e.g., 3:2, 16:10, 2.35:1). Both width and height must be positive numbers.');
-                    this.error(message);
-                    this.source.set('params.invalid', true);
-                }
+        /**
+         * Show and require the field for the custom choice only
+         *
+         * @param {String} choice
+         * @returns {void}
+         */
+        onChoiceChange: function (choice) {
+            var custom = choice === this.customChoice;
+
+            this.visible(custom);
+            this.validation['required-entry'] = custom;
+            this.required(custom);
+            if (!custom) {
+                this.error('');
             }
-
-            return {
-                valid: result.valid && isValid,
-                target: this
-            };
         }
     });
 });

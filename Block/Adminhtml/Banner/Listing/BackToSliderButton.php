@@ -9,52 +9,30 @@ declare(strict_types=1);
 
 namespace Hryvinskyi\BannerSliderAdminUi\Block\Adminhtml\Banner\Listing;
 
-use Magento\Backend\Block\Widget\Context;
-use Magento\Framework\View\Element\UiComponent\Control\ButtonProviderInterface;
+use Hryvinskyi\BannerSliderAdminUi\Block\Adminhtml\GenericButton;
 
 /**
- * Back to Slider button - only visible when slider_id parameter exists
+ * "Back to Slider" on a slider's banner grid, for admins allowed to see sliders.
  */
-class BackToSliderButton implements ButtonProviderInterface
+class BackToSliderButton extends GenericButton
 {
     /**
-     * @param Context $context
-     */
-    public function __construct(
-        private readonly Context $context
-    ) {
-    }
-
-    /**
-     * @inheritDoc
+     * Button data; none when the button does not apply
+     *
+     * @return array<string, mixed>
      */
     public function getButtonData(): array
     {
-        $sliderId = $this->context->getRequest()->getParam('slider_id');
-
-        if (!$sliderId) {
+        $sliderId = $this->getRequestedId('slider_id');
+        if ($sliderId === null || !$this->isAllowed('Hryvinskyi_BannerSlider::slider')) {
             return [];
         }
 
-        return [
-            'label' => __('Back to Slider'),
-            'class' => 'back',
-            'on_click' => sprintf("location.href = '%s';", $this->getBackUrl((int)$sliderId)),
-            'sort_order' => 5,
-        ];
-    }
-
-    /**
-     * Get URL for back to slider button
-     *
-     * @param int $sliderId
-     * @return string
-     */
-    private function getBackUrl(int $sliderId): string
-    {
-        return $this->context->getUrlBuilder()->getUrl(
-            'banner_slider/slider/edit',
-            ['slider_id' => $sliderId]
+        return $this->linkButton(
+            __('Back to Slider'),
+            $this->getUrl('banner_slider/slider/edit', ['slider_id' => $sliderId]),
+            'back',
+            5
         );
     }
 }

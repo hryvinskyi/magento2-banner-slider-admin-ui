@@ -43,7 +43,6 @@ define([
         editSlider: function () {
             var url = this.editSliderHref();
 
-            console.log(this.value());
             if (url && url !== '#') {
                 window.open(url, '_blank');
             }

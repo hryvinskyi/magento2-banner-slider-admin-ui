@@ -9,41 +9,28 @@ declare(strict_types=1);
 
 namespace Hryvinskyi\BannerSliderAdminUi\Block\Adminhtml\Banner\Edit;
 
-use Magento\Framework\View\Element\UiComponent\Control\ButtonProviderInterface;
+use Hryvinskyi\BannerSliderAdminUi\Block\Adminhtml\GenericButton;
 
 /**
- * Delete button for banner form
+ * "Delete" on the form of a stored banner, for admins allowed to delete banners.
  */
-class DeleteButton extends GenericButton implements ButtonProviderInterface
+class DeleteButton extends GenericButton
 {
     /**
-     * @inheritDoc
+     * Button data; none when the button does not apply
+     *
+     * @return array<string, mixed>
      */
     public function getButtonData(): array
     {
-        $data = [];
-        $bannerId = $this->getBannerId();
-
-        if ($bannerId) {
-            $data = [
-                'label' => __('Delete'),
-                'class' => 'delete',
-                'on_click' => 'deleteConfirm(\'' . __('Are you sure you want to delete this banner?') . '\', \''
-                    . $this->getDeleteUrl() . '\', {"data": {}})',
-                'sort_order' => 20,
-            ];
+        $bannerId = $this->getRequestedId('banner_id');
+        if ($bannerId === null || !$this->isAllowed('Hryvinskyi_BannerSlider::banner_delete')) {
+            return [];
         }
 
-        return $data;
-    }
-
-    /**
-     * Get URL for delete button
-     *
-     * @return string
-     */
-    private function getDeleteUrl(): string
-    {
-        return $this->getUrl('*/*/delete', ['banner_id' => $this->getBannerId()]);
+        return $this->deleteButton(
+            $this->getUrl('*/*/delete', ['banner_id' => $bannerId]),
+            __('Are you sure you want to delete this banner?')
+        );
     }
 }

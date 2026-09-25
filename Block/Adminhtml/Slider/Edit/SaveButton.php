@@ -9,18 +9,24 @@ declare(strict_types=1);
 
 namespace Hryvinskyi\BannerSliderAdminUi\Block\Adminhtml\Slider\Edit;
 
-use Magento\Framework\View\Element\UiComponent\Control\ButtonProviderInterface;
+use Hryvinskyi\BannerSliderAdminUi\Block\Adminhtml\GenericButton;
 
 /**
- * Save button for slider form
+ * "Save" on the slider form, for admins allowed to save sliders.
  */
-class SaveButton implements ButtonProviderInterface
+class SaveButton extends GenericButton
 {
     /**
-     * @inheritDoc
+     * Button data; none when the button does not apply
+     *
+     * @return array<string, mixed>
      */
     public function getButtonData(): array
     {
+        if (!$this->isAllowed('Hryvinskyi_BannerSlider::slider_save')) {
+            return [];
+        }
+
         return [
             'label' => __('Save'),
             'class' => 'save primary',

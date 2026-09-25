@@ -9,10 +9,63 @@
 <config xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
         xsi:noNamespaceSchemaLocation="urn:magento:module:Magento_Config:etc/system_file.xsd">
     <system>
-        <section id="hryvinskyi_banner_slider" translate="label" sortOrder="100" showInDefault="1" showInWebsite="1" showInStore="1">
+        <section id="hryvinskyi_banner_slider" translate="label" sortOrder="100" showInDefault="1"
+                 showInWebsite="1" showInStore="1">
             <label>Banner Slider</label>
             <tab>hryvinskyi</tab>
-            <resource>Hryvinskyi_BannerSliderAnalytics::statistics</resource>
+            <resource>Hryvinskyi_BannerSlider::config</resource>
+            <group id="image" translate="label" sortOrder="10" showInDefault="1">
+                <label>Images</label>
+                <field id="default_formats" translate="label comment" type="multiselect" sortOrder="10"
+                       showInDefault="1" canRestore="1">
+                    <label>Default Extra Formats</label>
+                    <comment>Formats a new banner crop is also saved in, besides its JPEG or PNG original. Browsers that support a format load it instead of the original. Leave none selected to save only the original.</comment>
+                    <source_model>Hryvinskyi\BannerSlider\Model\Source\VariantFormatOptions</source_model>
+                    <can_be_empty>1</can_be_empty>
+                </field>
+                <field id="webp_quality" translate="label comment" type="text" sortOrder="20" showInDefault="1"
+                       canRestore="1">
+                    <label>WebP Quality</label>
+                    <comment>1 to 100. Higher values give sharper images and larger files.</comment>
+                    <validate>required-entry validate-digits validate-digits-range digits-range-1-100</validate>
+                </field>
+                <field id="avif_quality" translate="label comment" type="text" sortOrder="30" showInDefault="1"
+                       canRestore="1">
+                    <label>AVIF Quality</label>
+                    <comment>1 to 100. Higher values give sharper images and larger files.</comment>
+                    <validate>required-entry validate-digits validate-digits-range digits-range-1-100</validate>
+                </field>
+                <field id="max_upload_size_mb" translate="label comment" type="text" sortOrder="40"
+                       showInDefault="1" canRestore="1">
+                    <label>Maximum Image Upload Size (MB)</label>
+                    <comment>Also limits each crop image the browser prepares.</comment>
+                    <validate>required-entry validate-number validate-greater-than-zero</validate>
+                </field>
+            </group>
+            <group id="video" translate="label" sortOrder="20" showInDefault="1" showInWebsite="1"
+                   showInStore="1">
+                <label>Videos</label>
+                <field id="privacy_enhanced" translate="label comment" type="select" sortOrder="10"
+                       showInDefault="1" showInWebsite="1" showInStore="1" canRestore="1">
+                    <label>Privacy-Enhanced Embeds</label>
+                    <comment>Embed YouTube videos from youtube-nocookie.com and ask Vimeo not to track visitors.</comment>
+                    <source_model>Magento\Config\Model\Config\Source\Yesno</source_model>
+                </field>
+                <field id="max_upload_size_mb" translate="label" type="text" sortOrder="20" showInDefault="1"
+                       canRestore="1">
+                    <label>Maximum Video Upload Size (MB)</label>
+                    <validate>required-entry validate-number validate-greater-than-zero</validate>
+                </field>
+            </group>
+            <group id="media" translate="label" sortOrder="30" showInDefault="1">
+                <label>Media Clean-up</label>
+                <field id="orphan_sweep_enabled" translate="label comment" type="select" sortOrder="10"
+                       showInDefault="1" canRestore="1">
+                    <label>Delete Unused Files Daily</label>
+                    <comment><![CDATA[A daily job deletes banner slider media files no banner, crop, banner content or slider CSS refers to. Before enabling it, run <code>bin/magento banner-slider:media:cleanup --dry-run</code> and check the list of files it would delete.]]></comment>
+                    <source_model>Magento\Config\Model\Config\Source\Yesno</source_model>
+                </field>
+            </group>
         </section>
     </system>
 </config>

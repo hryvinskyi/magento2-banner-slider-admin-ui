@@ -9,106 +9,110 @@ declare(strict_types=1);
 
 namespace Hryvinskyi\BannerSliderAdminUi\Controller\Adminhtml\Banner;
 
-use Hryvinskyi\BannerSlider\Model\BannerFactory;
-use Hryvinskyi\BannerSliderAdminUi\Api\DataProvider\PrepareDataProcessorInterface;
-use Hryvinskyi\BannerSliderApi\Api\BannerRepositoryInterface;
-use Hryvinskyi\BannerSliderApi\Api\Data\BannerExtensionFactory;
+use Hryvinskyi\BannerSliderAdminUi\Model\Form\BannerFormSubmission;
+use Hryvinskyi\BannerSliderAdminUi\Model\Form\PersistableBannerPost;
+use Hryvinskyi\BannerSliderAdminUi\Model\Form\RefusedPostStore;
+use Hryvinskyi\BannerSliderAdminUi\Model\Request\EntityIdReader;
 use Hryvinskyi\BannerSliderApi\Api\Data\BannerInterface;
 use Magento\Backend\App\Action;
 use Magento\Backend\App\Action\Context;
 use Magento\Framework\App\Action\HttpPostActionInterface;
-use Magento\Framework\Controller\Result\Redirect;
+use Magento\Framework\App\Request\Http as HttpRequest;
+use Magento\Framework\Controller\ResultInterface;
 use Magento\Framework\Exception\LocalizedException;
+use Magento\Framework\Validation\ValidationException;
 
 /**
- * Save banner controller
+ * Saves the banner form, then returns to the grid or, on "Save and Continue" or any error, to the form.
+ *
+ * On error the post is kept for the form of the same banner to show again, without the browser-encoded crop images.
  */
 class Save extends Action implements HttpPostActionInterface
 {
     public const ADMIN_RESOURCE = 'Hryvinskyi_BannerSlider::banner_save';
+    public const PERSISTOR_KEY = 'hryvinskyi_banner_slider_banner';
 
     /**
      * @param Context $context
-     * @param BannerRepositoryInterface $bannerRepository
-     * @param BannerFactory $bannerFactory
-     * @param PrepareDataProcessorInterface $prepareDataProcessor
-     * @param BannerExtensionFactory $extensionFactory
+     * @param BannerFormSubmission $submission
+     * @param RefusedPostStore $refusedPosts
+     * @param PersistableBannerPost $persistablePost
+     * @param EntityIdReader $idReader
      */
     public function __construct(
         Context $context,
-        private readonly BannerRepositoryInterface $bannerRepository,
-        private readonly BannerFactory $bannerFactory,
-        private readonly PrepareDataProcessorInterface $prepareDataProcessor,
-        private readonly BannerExtensionFactory $extensionFactory
+        private readonly BannerFormSubmission $submission,
+        private readonly RefusedPostStore $refusedPosts,
+        private readonly PersistableBannerPost $persistablePost,
+        private readonly EntityIdReader $idReader
     ) {
         parent::__construct($context);
     }
 
     /**
-     * Execute action
+     * Save the posted banner
      *
-     * @return Redirect
+     * @return ResultInterface
      */
-    public function execute(): Redirect
+    public function execute(): ResultInterface
     {
-        $resultRedirect = $this->resultRedirectFactory->create();
-        $data = $this->getRequest()->getPostValue();
-
-        if (!$data) {
-            return $resultRedirect->setPath('*/*/');
+        $redirect = $this->resultRedirectFactory->create();
+        $request = $this->getRequest();
+        $post = $request instanceof HttpRequest ? $request->getPostValue() : null;
+        if (!is_array($post) || $post === []) {
+            return $redirect->setPath('*/*/');
         }
-
-        $bannerId = isset($data['banner_id']) ? (int)$data['banner_id'] : null;
 
         try {
-            if ($bannerId) {
-                $banner = $this->bannerRepository->getById($bannerId);
-            } else {
-                $banner = $this->bannerFactory->create();
+            $banner = $this->submission->submit($post);
+            $this->refusedPosts->forget(self::PERSISTOR_KEY);
+            $this->messageManager->addSuccessMessage(__('The banner has been saved.'));
+
+            return $this->getRequest()->getParam('back') === 'edit'
+                ? $redirect->setPath('*/*/edit', ['banner_id' => $banner->getBannerId()])
+                : $redirect->setPath('*/*/');
+        } catch (ValidationException $exception) {
+            foreach ($exception->getErrors() as $error) {
+                $this->messageManager->addErrorMessage($error->getMessage());
             }
-
-            $data['object_entity'] = $banner;
-            $this->prepareDataProcessor->execute($data);
-            $this->setExtensionAttributes($banner, $data);
-            $this->bannerRepository->save($banner);
-
-            $this->messageManager->addSuccessMessage(__('Banner has been saved.'));
-
-            if ($this->getRequest()->getParam('back') === 'edit') {
-                return $resultRedirect->setPath('*/*/edit', ['banner_id' => $banner->getBannerId()]);
+            if ($exception->getErrors() === []) {
+                $this->messageManager->addErrorMessage($exception->getMessage());
             }
-
-            return $resultRedirect->setPath('*/*/');
-        } catch (LocalizedException $e) {
-            $this->messageManager->addErrorMessage($e->getMessage());
-        } catch (\Exception $e) {
-            $this->messageManager->addExceptionMessage($e, __('Something went wrong while saving the banner.'));
+        } catch (LocalizedException $exception) {
+            $this->messageManager->addErrorMessage($exception->getMessage());
+        } catch (\Exception $exception) {
+            $this->messageManager->addExceptionMessage(
+                $exception,
+                __('Something went wrong while saving the banner.')
+            );
         }
 
-        return $resultRedirect->setPath('*/*/edit', ['banner_id' => $bannerId]);
+        return $this->backToForm($post);
     }
 
     /**
-     * Set extension attributes on banner from request data
+     * Keep the post for the form and return to it
      *
-     * @param BannerInterface $banner
-     * @param array<string, mixed> $data
-     * @return void
+     * @param array<mixed> $post
+     * @return ResultInterface
      */
-    private function setExtensionAttributes(BannerInterface $banner, array $data): void
+    private function backToForm(array $post): ResultInterface
     {
-        $extensionAttributes = $banner->getExtensionAttributes();
-
-        if ($extensionAttributes === null) {
-            $extensionAttributes = $this->extensionFactory->create();
+        if ($this->persistablePost->hasEncodedImages($post)) {
+            $this->messageManager->addNoticeMessage(
+                __('The crop images prepared in the browser were not kept. They are prepared again when you save.')
+            );
         }
-
-        $cropsData = $data['responsive_crops_data'] ?? null;
-
-        if (!empty($cropsData) && is_array($cropsData)) {
-            $extensionAttributes->setResponsiveCropsData($cropsData);
+        $bannerId = $this->idReader->parse($post[BannerInterface::BANNER_ID] ?? null);
+        $this->refusedPosts->keep(self::PERSISTOR_KEY, $bannerId, $this->persistablePost->reduce($post));
+        if ($bannerId !== null) {
+            return $this->resultRedirectFactory->create()->setPath('*/*/edit', ['banner_id' => $bannerId]);
         }
+        $sliderId = $this->idReader->parse($post[BannerInterface::SLIDER_ID] ?? null);
 
-        $banner->setExtensionAttributes($extensionAttributes);
+        return $this->resultRedirectFactory->create()->setPath(
+            '*/*/new',
+            $sliderId === null ? [] : ['slider_id' => $sliderId]
+        );
     }
 }

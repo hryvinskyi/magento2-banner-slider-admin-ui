@@ -11,12 +11,12 @@ namespace Hryvinskyi\BannerSliderAdminUi\Controller\Adminhtml\Banner;
 
 use Magento\Backend\App\Action;
 use Magento\Backend\App\Action\Context;
+use Magento\Backend\Model\View\Result\PageFactory;
 use Magento\Framework\App\Action\HttpGetActionInterface;
-use Magento\Framework\View\Result\Page;
-use Magento\Framework\View\Result\PageFactory;
+use Magento\Framework\Controller\ResultInterface;
 
 /**
- * Banner grid index controller
+ * The banner grid page.
  */
 class Index extends Action implements HttpGetActionInterface
 {
@@ -34,16 +34,16 @@ class Index extends Action implements HttpGetActionInterface
     }
 
     /**
-     * Execute action
+     * Show the grid
      *
-     * @return Page
+     * @return ResultInterface
      */
-    public function execute(): Page
+    public function execute(): ResultInterface
     {
-        $resultPage = $this->resultPageFactory->create();
-        $resultPage->setActiveMenu('Hryvinskyi_BannerSlider::banner');
-        $resultPage->getConfig()->getTitle()->prepend(__('Banners'));
+        $page = $this->resultPageFactory->create();
+        $page->setActiveMenu('Hryvinskyi_BannerSlider::banner');
+        $page->getConfig()->getTitle()->prepend(__('Banners')->render());
 
-        return $resultPage;
+        return $page;
     }
 }

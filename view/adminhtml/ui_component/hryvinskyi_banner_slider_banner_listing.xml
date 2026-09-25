@@ -1,8 +1,11 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!--
-  ~ Copyright (c) 2025. Volodymyr Hryvinskyi. All rights reserved.
-  ~ @author: <mailto:volodymyr@hryvinskyi.com>
-  -->
+/**
+ * Copyright (c) 2026. Volodymyr Hryvinskyi. All rights reserved.
+ * Author: Volodymyr Hryvinskyi <volodymyr@hryvinskyi.com>
+ * GitHub: https://github.com/hryvinskyi
+ */
+-->
 <listing xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
          xsi:noNamespaceSchemaLocation="urn:magento:module:Magento_Ui:etc/ui_configuration.xsd">
     <argument name="data" xsi:type="array">
@@ -36,7 +39,7 @@
             </filterUrlParams>
         </settings>
         <aclResource>Hryvinskyi_BannerSlider::banner</aclResource>
-        <dataProvider class="Hryvinskyi\BannerSliderAdminUi\Ui\Listing\DataProvider\Banner" name="hryvinskyi_banner_slider_banner_listing_data_source">
+        <dataProvider class="Magento\Framework\View\Element\UiComponent\DataProvider\DataProvider" name="hryvinskyi_banner_slider_banner_listing_data_source">
             <settings>
                 <requestFieldName>banner_id</requestFieldName>
                 <primaryFieldName>banner_id</primaryFieldName>
@@ -65,7 +68,14 @@
             </argument>
         </filters>
         <massaction name="listing_massaction" component="Magento_Ui/js/grid/tree-massactions">
-            <action name="delete">
+            <action name="delete" class="Hryvinskyi\BannerSliderAdminUi\Ui\Component\MassAction\ScopedAction">
+                <argument name="data" xsi:type="array">
+                    <item name="aclResource" xsi:type="string">Hryvinskyi_BannerSlider::banner_delete</item>
+                    <!-- The grid of one slider deletes only that slider's banners -->
+                    <item name="scopeParams" xsi:type="array">
+                        <item name="slider_id" xsi:type="string">slider_id</item>
+                    </item>
+                </argument>
                 <settings>
                     <confirm>
                         <message translate="true">Are you sure you want to delete selected banners?</message>
@@ -121,7 +131,7 @@
         </column>
         <column name="slider_id" component="Magento_Ui/js/grid/columns/select" sortOrder="40">
             <settings>
-                <options class="Hryvinskyi\BannerSliderAdminUi\Model\Source\Slider"/>
+                <options class="Hryvinskyi\BannerSlider\Model\Source\SliderOptions"/>
                 <filter>select</filter>
                 <dataType>select</dataType>
                 <label translate="true">Slider</label>
@@ -129,7 +139,7 @@
         </column>
         <column name="type" component="Magento_Ui/js/grid/columns/select" sortOrder="50">
             <settings>
-                <options class="Hryvinskyi\BannerSliderAdminUi\Model\Source\BannerType"/>
+                <options class="Hryvinskyi\BannerSlider\Model\Source\BannerTypeOptions"/>
                 <filter>select</filter>
                 <dataType>select</dataType>
                 <label translate="true">Type</label>
@@ -172,10 +182,9 @@
                 <label translate="true">Modified</label>
             </settings>
         </column>
-
         <column name="status" component="Hryvinskyi_BannerSliderAdminUi/js/grid/columns/status" sortOrder="110">
             <settings>
-                <options class="Hryvinskyi\BannerSliderAdminUi\Model\Source\Status"/>
+                <options class="Hryvinskyi\BannerSlider\Model\Source\StatusOptions"/>
                 <filter>select</filter>
                 <dataType>select</dataType>
                 <label translate="true">Status</label>

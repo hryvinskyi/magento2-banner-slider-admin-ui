@@ -1,0 +1,22 @@
+<?xml version="1.0"?>
+<!--
+/**
+ * Copyright (c) 2026. Volodymyr Hryvinskyi. All rights reserved.
+ * Author: Volodymyr Hryvinskyi <volodymyr@hryvinskyi.com>
+ * GitHub: https://github.com/hryvinskyi
+ */
+-->
+<config xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:noNamespaceSchemaLocation="urn:magento:module:Magento_Store:etc/config.xsd">
+    <default>
+        <dev>
+            <js>
+                <minify_exclude>
+                    <!-- The bundled image codecs are ES modules that load their sibling files by their exact names
+                         (`./meta.js`, the `.wasm` binaries); minification would rename them to `.min.js`. -->
+                    <hryvinskyi_banner_slider_admin_lib>/Hryvinskyi_BannerSliderAdminUi/js/lib/</hryvinskyi_banner_slider_admin_lib>
+                </minify_exclude>
+            </js>
+        </dev>
+    </default>
+</config>

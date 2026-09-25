@@ -9,15 +9,16 @@ declare(strict_types=1);
 
 namespace Hryvinskyi\BannerSliderAdminUi\Controller\Adminhtml\Banner;
 
+use Hryvinskyi\BannerSliderAdminUi\Model\Request\EntityIdReader;
 use Hryvinskyi\BannerSliderApi\Api\BannerRepositoryInterface;
 use Magento\Backend\App\Action;
 use Magento\Backend\App\Action\Context;
 use Magento\Framework\App\Action\HttpPostActionInterface;
-use Magento\Framework\Controller\Result\Redirect;
+use Magento\Framework\Controller\ResultInterface;
 use Magento\Framework\Exception\LocalizedException;
 
 /**
- * Delete banner controller
+ * Deletes one banner, then returns to the banner grid.
  */
 class Delete extends Action implements HttpPostActionInterface
 {
@@ -26,38 +27,43 @@ class Delete extends Action implements HttpPostActionInterface
     /**
      * @param Context $context
      * @param BannerRepositoryInterface $bannerRepository
+     * @param EntityIdReader $idReader
      */
     public function __construct(
         Context $context,
-        private readonly BannerRepositoryInterface $bannerRepository
+        private readonly BannerRepositoryInterface $bannerRepository,
+        private readonly EntityIdReader $idReader
     ) {
         parent::__construct($context);
     }
 
     /**
-     * Execute action
+     * Delete the banner named by `banner_id`
      *
-     * @return Redirect
+     * @return ResultInterface
      */
-    public function execute(): Redirect
+    public function execute(): ResultInterface
     {
-        $resultRedirect = $this->resultRedirectFactory->create();
-        $bannerId = (int)$this->getRequest()->getParam('banner_id');
+        $redirect = $this->resultRedirectFactory->create()->setPath('*/*/');
+        $bannerId = $this->idReader->read($this->getRequest(), 'banner_id');
+        if ($bannerId === null) {
+            $this->messageManager->addErrorMessage(__('Choose a banner to delete.'));
 
-        if (!$bannerId) {
-            $this->messageManager->addErrorMessage(__('Banner ID is required.'));
-            return $resultRedirect->setPath('*/*/');
+            return $redirect;
         }
 
         try {
             $this->bannerRepository->deleteById($bannerId);
-            $this->messageManager->addSuccessMessage(__('Banner has been deleted.'));
-        } catch (LocalizedException $e) {
-            $this->messageManager->addErrorMessage($e->getMessage());
-        } catch (\Exception $e) {
-            $this->messageManager->addExceptionMessage($e, __('Something went wrong while deleting the banner.'));
+            $this->messageManager->addSuccessMessage(__('The banner has been deleted.'));
+        } catch (LocalizedException $exception) {
+            $this->messageManager->addErrorMessage($exception->getMessage());
+        } catch (\Exception $exception) {
+            $this->messageManager->addExceptionMessage(
+                $exception,
+                __('Something went wrong while deleting the banner.')
+            );
         }
 
-        return $resultRedirect->setPath('*/*/');
+        return $redirect;
     }
 }

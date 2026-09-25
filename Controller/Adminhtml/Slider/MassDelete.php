@@ -9,18 +9,22 @@ declare(strict_types=1);
 
 namespace Hryvinskyi\BannerSliderAdminUi\Controller\Adminhtml\Slider;
 
-use Hryvinskyi\BannerSlider\Model\ResourceModel\Slider\CollectionFactory;
-use Hryvinskyi\BannerSliderApi\Api\Data\SliderInterface;
+use Hryvinskyi\BannerSliderAdminUi\Model\Request\EntityIdReader;
 use Hryvinskyi\BannerSliderApi\Api\SliderRepositoryInterface;
 use Magento\Backend\App\Action;
 use Magento\Backend\App\Action\Context;
 use Magento\Framework\App\Action\HttpPostActionInterface;
-use Magento\Framework\Controller\Result\Redirect;
+use Magento\Framework\Controller\ResultInterface;
+use Magento\Framework\Data\Collection\AbstractDb;
 use Magento\Framework\Exception\LocalizedException;
+use Magento\Framework\Exception\NoSuchEntityException;
 use Magento\Ui\Component\MassAction\Filter;
 
 /**
- * Mass delete sliders controller
+ * Deletes the sliders selected in the grid, then returns to it.
+ *
+ * The selection is resolved to ids in one query on the grid collection (injected in `etc/adminhtml/di.xml`), and
+ * each slider is deleted through the repository, so its banners, breakpoints, crops and files go with it.
  */
 class MassDelete extends Action implements HttpPostActionInterface
 {
@@ -29,54 +33,72 @@ class MassDelete extends Action implements HttpPostActionInterface
     /**
      * @param Context $context
      * @param Filter $filter
-     * @param CollectionFactory $collectionFactory
+     * @param AbstractDb $collection The slider grid collection, one instance per request
      * @param SliderRepositoryInterface $sliderRepository
+     * @param EntityIdReader $idReader
      */
     public function __construct(
         Context $context,
         private readonly Filter $filter,
-        private readonly CollectionFactory $collectionFactory,
-        private readonly SliderRepositoryInterface $sliderRepository
+        private readonly AbstractDb $collection,
+        private readonly SliderRepositoryInterface $sliderRepository,
+        private readonly EntityIdReader $idReader
     ) {
         parent::__construct($context);
     }
 
     /**
-     * Execute mass delete action
+     * Delete the selected sliders
      *
-     * @return Redirect
+     * @return ResultInterface
      */
-    public function execute(): Redirect
+    public function execute(): ResultInterface
     {
-        $resultRedirect = $this->resultRedirectFactory->create();
+        $redirect = $this->resultRedirectFactory->create()->setPath('*/*/');
 
         try {
-            $collection = $this->filter->getCollection($this->collectionFactory->create());
-            $deletedCount = 0;
-
-            /** @var SliderInterface $slider */
-            foreach ($collection->getItems() as $slider) {
-                try {
-                    $this->sliderRepository->deleteById((int)$slider->getSliderId());
-                    $deletedCount++;
-                } catch (LocalizedException $e) {
-                    $this->messageManager->addErrorMessage(
-                        __('Could not delete slider ID %1: %2', $slider->getSliderId(), $e->getMessage())
-                    );
+            $deleted = 0;
+            foreach ($this->filter->getCollection($this->collection)->getAllIds() as $rawId) {
+                $sliderId = $this->idReader->parse($rawId);
+                if ($sliderId !== null && $this->delete($sliderId)) {
+                    $deleted++;
                 }
             }
-
-            if ($deletedCount > 0) {
-                $this->messageManager->addSuccessMessage(
-                    __('A total of %1 slider(s) have been deleted.', $deletedCount)
-                );
+            if ($deleted > 0) {
+                $this->messageManager->addSuccessMessage(__('A total of %1 slider(s) have been deleted.', $deleted));
             }
-        } catch (LocalizedException $e) {
-            $this->messageManager->addErrorMessage($e->getMessage());
-        } catch (\Exception $e) {
-            $this->messageManager->addExceptionMessage($e, __('Something went wrong while deleting sliders.'));
+        } catch (LocalizedException $exception) {
+            $this->messageManager->addErrorMessage($exception->getMessage());
+        } catch (\Exception $exception) {
+            $this->messageManager->addExceptionMessage(
+                $exception,
+                __('Something went wrong while deleting the sliders.')
+            );
         }
 
-        return $resultRedirect->setPath('*/*/');
+        return $redirect;
+    }
+
+    /**
+     * Delete one slider; a slider already gone counts as not deleted, a failure is reported and skipped
+     *
+     * @param int $sliderId
+     * @return bool Whether the slider was deleted
+     */
+    private function delete(int $sliderId): bool
+    {
+        try {
+            $this->sliderRepository->deleteById($sliderId);
+        } catch (NoSuchEntityException) {
+            return false;
+        } catch (LocalizedException $exception) {
+            $this->messageManager->addErrorMessage(
+                __('Slider %1 could not be deleted: %2', $sliderId, $exception->getMessage())
+            );
+
+            return false;
+        }
+
+        return true;
     }
 }

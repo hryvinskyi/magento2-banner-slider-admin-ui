@@ -9,238 +9,88 @@ declare(strict_types=1);
 
 namespace Hryvinskyi\BannerSliderAdminUi\Ui\DataProvider\Banner;
 
-use Hryvinskyi\BannerSlider\Model\ResourceModel\Banner\CollectionFactory;
-use Hryvinskyi\BannerSliderAdminUi\Api\DataProvider\PrepareDataProcessorInterface;
-use Hryvinskyi\BannerSliderApi\Api\BreakpointRepositoryInterface;
+use Hryvinskyi\BannerSliderAdminUi\Api\Form\PostData;
+use Hryvinskyi\BannerSliderAdminUi\Model\Form\BannerFormHydrator;
+use Hryvinskyi\BannerSliderAdminUi\Model\Form\RefusedPostStore;
+use Hryvinskyi\BannerSliderAdminUi\Model\Request\EntityIdReader;
+use Hryvinskyi\BannerSliderAdminUi\Ui\DataProvider\AbstractEntityFormDataProvider;
+use Hryvinskyi\BannerSliderApi\Api\BannerRepositoryInterface;
 use Hryvinskyi\BannerSliderApi\Api\Data\BannerInterface;
-use Hryvinskyi\BannerSliderApi\Api\Data\BreakpointInterface;
-use Hryvinskyi\BannerSliderApi\Api\Data\ResponsiveCropInterface;
-use Hryvinskyi\BannerSliderApi\Api\ResponsiveCropRepositoryInterface;
-use Magento\Framework\App\Request\DataPersistorInterface;
+use Hryvinskyi\BannerSliderApi\Api\Data\BannerInterfaceFactory;
 use Magento\Framework\App\RequestInterface;
-use Magento\Framework\UrlInterface;
-use Magento\Store\Model\StoreManagerInterface;
-use Magento\Ui\DataProvider\AbstractDataProvider;
 use Magento\Ui\DataProvider\Modifier\PoolInterface;
 
 /**
- * Banner form data provider
+ * Banner form data: the stored banner exported by the banner form hydrator, or, for a new banner, the slider given
+ * in the request (the "Add New Banner" button of a slider's banner grid passes it). A refused save of the same banner
+ * is shown again through the hydrator.
  */
-class FormDataProvider extends AbstractDataProvider
+class FormDataProvider extends AbstractEntityFormDataProvider
 {
-    private const BREAKPOINT_IMAGE_PATH_PREFIX = 'banner_slider/breakpoint/';
-
-    /**
-     * @var array|null
-     */
-    private ?array $loadedData = null;
-
     /**
      * @param string $name
      * @param string $primaryFieldName
      * @param string $requestFieldName
-     * @param CollectionFactory $collectionFactory
-     * @param DataPersistorInterface $dataPersistor
-     * @param StoreManagerInterface $storeManager
-     * @param BreakpointRepositoryInterface $breakpointRepository
-     * @param ResponsiveCropRepositoryInterface $responsiveCropRepository
-     * @param PrepareDataProcessorInterface $prepareDataProcessor
+     * @param RefusedPostStore $refusedPosts
+     * @param PoolInterface $pool
+     * @param EntityIdReader $idReader
+     * @param BannerRepositoryInterface $bannerRepository
+     * @param BannerInterfaceFactory $bannerFactory
+     * @param BannerFormHydrator $hydrator
      * @param RequestInterface $request
-     * @param PoolInterface|null $pool
-     * @param array $meta
-     * @param array $data
+     * @param array<mixed> $meta
+     * @param array<mixed> $data
      */
     public function __construct(
         string $name,
         string $primaryFieldName,
         string $requestFieldName,
-        CollectionFactory $collectionFactory,
-        private readonly DataPersistorInterface $dataPersistor,
-        private readonly StoreManagerInterface $storeManager,
-        private readonly BreakpointRepositoryInterface $breakpointRepository,
-        private readonly ResponsiveCropRepositoryInterface $responsiveCropRepository,
-        private readonly PrepareDataProcessorInterface $prepareDataProcessor,
+        RefusedPostStore $refusedPosts,
+        PoolInterface $pool,
+        EntityIdReader $idReader,
+        private readonly BannerRepositoryInterface $bannerRepository,
+        private readonly BannerInterfaceFactory $bannerFactory,
+        private readonly BannerFormHydrator $hydrator,
         private readonly RequestInterface $request,
-        private readonly ?PoolInterface $pool = null,
         array $meta = [],
         array $data = []
     ) {
-        $this->collection = $collectionFactory->create();
-        parent::__construct($name, $primaryFieldName, $requestFieldName, $meta, $data);
+        parent::__construct(
+            $name,
+            $primaryFieldName,
+            $requestFieldName,
+            $refusedPosts,
+            $pool,
+            $idReader,
+            'hryvinskyi_banner_slider_banner',
+            $meta,
+            $data
+        );
     }
 
     /**
      * @inheritDoc
      */
-    public function getData(): array
+    protected function record(int $entityId, ?PostData $refusedPost): array
     {
-        if ($this->loadedData !== null) {
-            return $this->loadedData;
-        }
+        $banner = $this->bannerRepository->getById($entityId);
+        $values = $refusedPost === null
+            ? $this->hydrator->export($banner)
+            : $this->hydrator->restore($refusedPost, $banner);
 
-        $this->loadedData = [];
-        $items = $this->collection->getItems();
-
-        /** @var BannerInterface $banner */
-        foreach ($items as $banner) {
-            $bannerData = $banner->getData();
-            $this->prepareDataProcessor->execute($bannerData);
-            $bannerData = $this->prepareResponsiveImageData($banner, $bannerData);
-            $this->loadedData[$banner->getBannerId()] = $bannerData;
-        }
-
-        $data = $this->dataPersistor->get('hryvinskyi_banner_slider_banner');
-        if (!empty($data)) {
-            $banner = $this->collection->getNewEmptyItem();
-            $banner->setData($data);
-            $bannerData = $banner->getData();
-            $this->prepareDataProcessor->execute($bannerData);
-            $this->loadedData[$banner->getBannerId()] = $bannerData;
-            $this->dataPersistor->clear('hryvinskyi_banner_slider_banner');
-        }
-
-        // Set default slider_id for new banner from request parameter
-        if (empty($this->loadedData)) {
-            $sliderId = $this->request->getParam('slider_id');
-            if ($sliderId) {
-                $this->loadedData[''] = ['slider_id' => (int)$sliderId];
-            }
-        }
-
-        // Apply modifiers if pool exists
-        if ($this->pool !== null) {
-            foreach ($this->pool->getModifiersInstances() as $modifier) {
-                $this->loadedData = $modifier->modifyData($this->loadedData);
-            }
-        }
-
-        return $this->loadedData;
+        return array_replace($values, [BannerInterface::BANNER_ID => (string)$entityId]);
     }
 
     /**
      * @inheritDoc
      */
-    public function getMeta(): array
+    protected function newRecord(?PostData $refusedPost): array
     {
-        $meta = parent::getMeta();
-
-        // Apply modifiers if pool exists
-        if ($this->pool !== null) {
-            foreach ($this->pool->getModifiersInstances() as $modifier) {
-                $meta = $modifier->modifyMeta($meta);
-            }
+        if ($refusedPost !== null) {
+            return $this->hydrator->restore($refusedPost, $this->bannerFactory->create());
         }
+        $sliderId = $this->idReader->read($this->request, BannerInterface::SLIDER_ID);
 
-        return $meta;
-    }
-
-    /**
-     * Prepare responsive image data including breakpoints and crops
-     *
-     * @param BannerInterface $banner
-     * @param array $bannerData
-     * @return array
-     */
-    private function prepareResponsiveImageData(BannerInterface $banner, array $bannerData): array
-    {
-        $sliderId = $banner->getSliderId();
-        $bannerId = $banner->getBannerId();
-
-        if (!$sliderId) {
-            $bannerData['responsive_cropper'] = [
-                'breakpoints' => [],
-                'crops' => [],
-                'banner_id' => $bannerId,
-                'slider_id' => null,
-            ];
-            return $bannerData;
-        }
-
-        // Load breakpoints for the slider
-        $breakpoints = $this->breakpointRepository->getBySliderId((int)$sliderId);
-        $breakpointsData = [];
-
-        /** @var BreakpointInterface $breakpoint */
-        foreach ($breakpoints as $breakpoint) {
-            $breakpointsData[] = [
-                'breakpoint_id' => $breakpoint->getBreakpointId(),
-                'name' => $breakpoint->getName(),
-                'identifier' => $breakpoint->getIdentifier(),
-                'media_query' => $breakpoint->getMediaQuery(),
-                'min_width' => $breakpoint->getMinWidth(),
-                'target_width' => $breakpoint->getTargetWidth(),
-                'target_height' => $breakpoint->getTargetHeight(),
-                'sort_order' => $breakpoint->getSortOrder(),
-            ];
-        }
-
-        // Load existing crops for this banner
-        $crops = [];
-        if ($bannerId) {
-            $existingCrops = $this->responsiveCropRepository->getByBannerId((int)$bannerId);
-            $mediaUrl = $this->storeManager->getStore()->getBaseUrl(UrlInterface::URL_TYPE_MEDIA);
-
-            /** @var ResponsiveCropInterface $crop */
-            foreach ($existingCrops as $crop) {
-                $sourceImage = $crop->getSourceImage();
-                $isCustomImage = $this->isCustomBreakpointImage($sourceImage);
-
-                $cropData = [
-                    'crop_id' => $crop->getCropId(),
-                    'breakpoint_id' => $crop->getBreakpointId(),
-                    'source_image' => $sourceImage,
-                    'crop_x' => $crop->getCropX(),
-                    'crop_y' => $crop->getCropY(),
-                    'crop_width' => $crop->getCropWidth(),
-                    'crop_height' => $crop->getCropHeight(),
-                    'generate_webp' => $crop->isGenerateWebpEnabled(),
-                    'generate_avif' => $crop->isGenerateAvifEnabled(),
-                    'webp_quality' => $crop->getWebpQuality(),
-                    'avif_quality' => $crop->getAvifQuality(),
-                    'custom_source_image' => $isCustomImage ? $sourceImage : null,
-                    'custom_source_image_url' => $isCustomImage && $sourceImage ? $mediaUrl . $sourceImage : null,
-                ];
-
-                // Add URLs for existing images (paths already include the responsive directory prefix)
-                if ($sourceImage) {
-                    $cropData['source_image_url'] = $mediaUrl . $sourceImage;
-                }
-                if ($crop->getCroppedImage()) {
-                    $cropData['cropped_image_url'] = $mediaUrl . $crop->getCroppedImage();
-                }
-                if ($crop->getWebpImage()) {
-                    $cropData['webp_image_url'] = $mediaUrl . $crop->getWebpImage();
-                }
-                if ($crop->getAvifImage()) {
-                    $cropData['avif_image_url'] = $mediaUrl . $crop->getAvifImage();
-                }
-
-                $crops[$crop->getBreakpointId()] = $cropData;
-            }
-        }
-
-        $bannerData['responsive_cropper'] = [
-            'breakpoints' => $breakpointsData,
-            'crops' => $crops,
-            'banner_id' => $bannerId,
-            'slider_id' => $sliderId,
-        ];
-
-        return $bannerData;
-    }
-
-    /**
-     * Check if source image is a custom breakpoint image (not the main desktop image)
-     *
-     * @param string|null $sourceImage
-     * @return bool
-     */
-    private function isCustomBreakpointImage(?string $sourceImage): bool
-    {
-        if ($sourceImage === null || $sourceImage === '') {
-            return false;
-        }
-
-        return str_starts_with($sourceImage, self::BREAKPOINT_IMAGE_PATH_PREFIX);
+        return $sliderId === null ? [] : [BannerInterface::SLIDER_ID => (string)$sliderId];
     }
 }

@@ -9,16 +9,18 @@ declare(strict_types=1);
 
 namespace Hryvinskyi\BannerSliderAdminUi\Controller\Adminhtml\Banner;
 
+use Hryvinskyi\BannerSliderAdminUi\Model\Request\EntityIdReader;
 use Hryvinskyi\BannerSliderApi\Api\BannerRepositoryInterface;
 use Magento\Backend\App\Action;
 use Magento\Backend\App\Action\Context;
+use Magento\Backend\Model\View\Result\PageFactory;
 use Magento\Framework\App\Action\HttpGetActionInterface;
+use Magento\Framework\Controller\ResultInterface;
 use Magento\Framework\Exception\NoSuchEntityException;
-use Magento\Framework\View\Result\Page;
-use Magento\Framework\View\Result\PageFactory;
 
 /**
- * Edit banner controller
+ * The banner form page, for a new banner or a stored one; a banner that no longer exists sends the admin back to
+ * the grid with a message.
  */
 class Edit extends Action implements HttpGetActionInterface
 {
@@ -28,39 +30,41 @@ class Edit extends Action implements HttpGetActionInterface
      * @param Context $context
      * @param PageFactory $resultPageFactory
      * @param BannerRepositoryInterface $bannerRepository
+     * @param EntityIdReader $idReader
      */
     public function __construct(
         Context $context,
         private readonly PageFactory $resultPageFactory,
-        private readonly BannerRepositoryInterface $bannerRepository
+        private readonly BannerRepositoryInterface $bannerRepository,
+        private readonly EntityIdReader $idReader
     ) {
         parent::__construct($context);
     }
 
     /**
-     * Execute action
+     * Show the banner form
      *
-     * @return Page
+     * @return ResultInterface
      */
-    public function execute(): Page
+    public function execute(): ResultInterface
     {
-        $bannerId = (int)$this->getRequest()->getParam('banner_id');
+        $bannerId = $this->idReader->read($this->getRequest(), 'banner_id');
         $title = __('New Banner');
 
-        if ($bannerId) {
+        if ($bannerId !== null) {
             try {
-                $banner = $this->bannerRepository->getById($bannerId);
-                $title = __('Edit Banner: %1', $banner->getName());
-            } catch (NoSuchEntityException $e) {
+                $title = __('Edit Banner: %1', $this->bannerRepository->getById($bannerId)->getName());
+            } catch (NoSuchEntityException) {
                 $this->messageManager->addErrorMessage(__('This banner no longer exists.'));
+
                 return $this->resultRedirectFactory->create()->setPath('*/*/');
             }
         }
 
-        $resultPage = $this->resultPageFactory->create();
-        $resultPage->setActiveMenu('Hryvinskyi_BannerSlider::banner');
-        $resultPage->getConfig()->getTitle()->prepend($title);
+        $page = $this->resultPageFactory->create();
+        $page->setActiveMenu('Hryvinskyi_BannerSlider::banner');
+        $page->getConfig()->getTitle()->prepend($title->render());
 
-        return $resultPage;
+        return $page;
     }
 }

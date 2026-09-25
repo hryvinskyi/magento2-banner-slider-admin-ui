@@ -9,38 +9,30 @@ declare(strict_types=1);
 
 namespace Hryvinskyi\BannerSliderAdminUi\Block\Adminhtml\Banner\Listing;
 
-use Magento\Backend\Block\Widget\Context;
-use Magento\Framework\View\Element\UiComponent\Control\ButtonProviderInterface;
+use Hryvinskyi\BannerSliderAdminUi\Block\Adminhtml\GenericButton;
 
 /**
- * Add New Banner button with slider_id preselection
+ * "Add New Banner" on the banner grid, for admins allowed to save banners; from a slider's banner grid the new
+ * banner starts in that slider.
  */
-class AddNewButton implements ButtonProviderInterface
+class AddNewButton extends GenericButton
 {
     /**
-     * @param Context $context
-     */
-    public function __construct(
-        private readonly Context $context
-    ) {
-    }
-
-    /**
-     * @inheritDoc
+     * Button data; none when the button does not apply
+     *
+     * @return array<string, mixed>
      */
     public function getButtonData(): array
     {
-        $params = [];
-        $sliderId = $this->context->getRequest()->getParam('slider_id');
-
-        if ($sliderId) {
-            $params['slider_id'] = $sliderId;
+        if (!$this->isAllowed('Hryvinskyi_BannerSlider::banner_save')) {
+            return [];
         }
+        $sliderId = $this->getRequestedId('slider_id');
 
         return [
             'label' => __('Add New Banner'),
             'class' => 'primary',
-            'url' => $this->context->getUrlBuilder()->getUrl('*/*/new', $params),
+            'url' => $this->getUrl('*/*/new', $sliderId === null ? [] : ['slider_id' => $sliderId]),
             'sort_order' => 10,
         ];
     }
