@@ -273,3 +273,5 @@
 "Maximum file size","Maximum file size"
 "Allowed file types","Allowed file types"
 "Browse to find or drag image here","Browse to find or drag image here"
+"JPEG Quality","JPEG Quality"
+"1 to 100. Used for crops of JPEG images cut on the server.","1 to 100. Used for crops of JPEG images cut on the server."

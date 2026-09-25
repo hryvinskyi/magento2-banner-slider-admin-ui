@@ -13,7 +13,7 @@ A breaking release on `hryvinskyi/magento2-banner-slider-api` 2.0 and `hryvinsky
 - `etc/acl.xml` (moved from the core module): the same `Hryvinskyi_BannerSlider::` resource ids as 1.x, plus
   `Hryvinskyi_BannerSlider::config` under Stores > Configuration. Buttons, row actions and mass actions are hidden
   from admins without the matching resource; the in-page menu shows only permitted items.
-- Configuration section `hryvinskyi_banner_slider`: default extra crop formats, WebP/AVIF quality, image and video
+- Configuration section `hryvinskyi_banner_slider`: default extra crop formats, WebP/AVIF quality, JPEG quality of server-cut crops, image and video
   upload limits, privacy-enhanced video embeds, and the daily unused-media clean-up switch.
 - Slider form: "Slides per Page" rules (min width, slides, gap), "All Store Views", date and time in the store's
   time zone (stored in UTC).

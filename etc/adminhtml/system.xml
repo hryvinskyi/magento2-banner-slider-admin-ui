@@ -35,6 +35,12 @@
                     <comment>1 to 100. Higher values give sharper images and larger files.</comment>
                     <validate>required-entry validate-digits validate-digits-range digits-range-1-100</validate>
                 </field>
+                <field id="jpeg_quality" translate="label comment" type="text" sortOrder="35" showInDefault="1"
+                       canRestore="1">
+                    <label>JPEG Quality</label>
+                    <comment>1 to 100. Used for crops of JPEG images cut on the server.</comment>
+                    <validate>required-entry validate-digits validate-digits-range digits-range-1-100</validate>
+                </field>
                 <field id="max_upload_size_mb" translate="label comment" type="text" sortOrder="40"
                        showInDefault="1" canRestore="1">
                     <label>Maximum Image Upload Size (MB)</label>
