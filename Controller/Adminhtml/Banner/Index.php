@@ -41,6 +41,7 @@ class Index extends Action implements HttpGetActionInterface
     public function execute(): ResultInterface
     {
         $page = $this->resultPageFactory->create();
+        $page->addDefaultHandle();
         $page->setActiveMenu('Hryvinskyi_BannerSlider::banner');
         $page->getConfig()->getTitle()->prepend(__('Banners')->render());
 

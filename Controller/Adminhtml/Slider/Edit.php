@@ -62,6 +62,7 @@ class Edit extends Action implements HttpGetActionInterface
         }
 
         $page = $this->resultPageFactory->create();
+        $page->addDefaultHandle();
         $page->setActiveMenu('Hryvinskyi_BannerSlider::slider');
         $page->getConfig()->getTitle()->prepend($title->render());
 

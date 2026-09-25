@@ -873,6 +873,14 @@ test('value rules: link URLs, identifiers, aspect ratios, locations and CSS leng
 let passed = 0;
 const failures = [];
 
+test('templates: a field error is shown by the field wrapper, never by looping over the error text', () => {
+    const templates = join(dirname(fileURLToPath(import.meta.url)), '../../view/adminhtml/web/template/form/element');
+    for (const name of ['slider-select.html', 'uploader/upload-only.html']) {
+        const html = readFileSync(join(templates, name), 'utf8');
+        assert.ok(!/data:\s*error\b/.test(html), `${name} must not iterate over the error string`);
+    }
+});
+
 for (const {name, body} of tests) {
     try {
         await body();

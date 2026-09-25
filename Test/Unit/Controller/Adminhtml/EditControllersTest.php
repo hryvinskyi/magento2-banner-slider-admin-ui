@@ -10,7 +10,9 @@ declare(strict_types=1);
 namespace Hryvinskyi\BannerSliderAdminUi\Test\Unit\Controller\Adminhtml;
 
 use Hryvinskyi\BannerSliderAdminUi\Controller\Adminhtml\Banner\Edit as BannerEdit;
+use Hryvinskyi\BannerSliderAdminUi\Controller\Adminhtml\Banner\Index as BannerIndex;
 use Hryvinskyi\BannerSliderAdminUi\Controller\Adminhtml\Slider\Edit as SliderEdit;
+use Hryvinskyi\BannerSliderAdminUi\Controller\Adminhtml\Slider\Index as SliderIndex;
 use Hryvinskyi\BannerSliderAdminUi\Model\Request\EntityIdReader;
 use Hryvinskyi\BannerSliderAdminUi\Test\Unit\Fake\FakeBanner;
 use Hryvinskyi\BannerSliderApi\Api\BannerRepositoryInterface;
@@ -26,6 +28,8 @@ use PHPUnit\Framework\TestCase;
 
 #[CoversClass(BannerEdit::class)]
 #[CoversClass(SliderEdit::class)]
+#[CoversClass(BannerIndex::class)]
+#[CoversClass(SliderIndex::class)]
 class EditControllersTest extends TestCase
 {
     use BackendActionContext;
@@ -102,6 +106,18 @@ class EditControllersTest extends TestCase
     }
 
     /**
+     * Both grid pages load their default layout handles, set the menu and the title
+     *
+     * @return void
+     */
+    public function testGridPagesLoadTheirLayoutHandles(): void
+    {
+        self::assertInstanceOf(Page::class, (new SliderIndex($this->actionContext(), $this->pageFactory()))->execute());
+        self::assertInstanceOf(Page::class, (new BannerIndex($this->actionContext(), $this->pageFactory()))->execute());
+        self::assertSame(['Sliders', 'Banners'], $this->titles);
+    }
+
+    /**
      * A page factory whose page records its title
      *
      * @return PageFactory
@@ -115,7 +131,22 @@ class EditControllersTest extends TestCase
         $config = $this->createMock(Config::class);
         $config->method('getTitle')->willReturn($title);
         $page = $this->createMock(Page::class);
-        $page->method('getConfig')->willReturn($config);
+        $handleAdded = false;
+        $page->method('addDefaultHandle')->willReturnCallback(function () use (&$handleAdded, $page): Page {
+            $handleAdded = true;
+
+            return $page;
+        });
+        $page->method('getConfig')->willReturnCallback(function () use (&$handleAdded, $config): Config {
+            self::assertTrue($handleAdded, 'The page gets its default layout handles before it is used.');
+
+            return $config;
+        });
+        $page->method('setActiveMenu')->willReturnCallback(function () use (&$handleAdded, $page): Page {
+            self::assertTrue($handleAdded, 'The page gets its default layout handles before the menu is set.');
+
+            return $page;
+        });
         $factory = $this->createMock(PageFactory::class);
         $factory->method('create')->willReturn($page);
 
