@@ -2,7 +2,7 @@
     "name": "hryvinskyi/magento2-banner-slider-admin-ui",
     "description": "Banner Slider admin module: slider and banner grids and forms, responsive crop editor, uploads, ACL, menu and configuration",
     "type": "magento2-module",
-    "version": "2.1.1",
+    "version": "2.1.2",
     "license": "MIT",
     "authors": [
         {

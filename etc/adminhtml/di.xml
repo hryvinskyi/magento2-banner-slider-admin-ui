@@ -9,18 +9,6 @@
 <config xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
         xsi:noNamespaceSchemaLocation="urn:magento:framework:ObjectManager/etc/config.xsd">
 
-    <!-- Admin listings read the grid collections of the core module -->
-    <type name="Magento\Framework\View\Element\UiComponent\DataProvider\CollectionFactory">
-        <arguments>
-            <argument name="collections" xsi:type="array">
-                <item name="hryvinskyi_banner_slider_slider_listing_data_source"
-                      xsi:type="string">Hryvinskyi\BannerSlider\Model\ResourceModel\Slider\Grid\Collection</item>
-                <item name="hryvinskyi_banner_slider_banner_listing_data_source"
-                      xsi:type="string">Hryvinskyi\BannerSlider\Model\ResourceModel\Banner\Grid\Collection</item>
-            </argument>
-        </arguments>
-    </type>
-
     <!-- Mass delete resolves the grid selection on a fresh grid collection -->
     <type name="Hryvinskyi\BannerSliderAdminUi\Controller\Adminhtml\Slider\MassDelete">
         <arguments>

@@ -5,6 +5,15 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.1.2] - 2026-09-30
+
+### Fixed
+- Every admin grid of other modules (sales orders, customers, quotes, ...) failed with "Not registered handle
+  <name>_data_source" once this module was installed. The grid collections were registered on
+  `Magento\Framework\View\Element\UiComponent\DataProvider\CollectionFactory` in `etc/adminhtml/di.xml`, and an
+  area `di.xml` replaces the whole `collections` argument instead of merging into it. They are now registered in the
+  global `etc/di.xml`.
+
 ## [2.1.1] - 2026-09-25
 
 ### Fixed
